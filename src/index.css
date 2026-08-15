@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", "Segoe UI", sans-serif;
+  --font-display: "Manrope", "Segoe UI", sans-serif;
+  --color-ink: #17221f;
+  --color-paper: #f7f6f0;
+  --color-mint: #d8f2e7;
+  --color-forest: #174f3f;
+  --color-coral: #f18b6d;
+  --color-sun: #f3c568;
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; min-width: 320px; background: #f7f6f0; color: #17221f; font-family: var(--font-sans); }
+  button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+  button, a { transition: all 160ms ease; }
+  input, select, textarea { outline: none; }
+  input:focus, select:focus, textarea:focus { border-color: #27775f !important; box-shadow: 0 0 0 3px rgba(39,119,95,.11); }
+  ::selection { background: #b9e6d7; }
+}
+
+@layer components {
+  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-[#174f3f] px-5 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(23,79,63,.18)] hover:-translate-y-0.5 hover:bg-[#103e31] disabled:pointer-events-none disabled:opacity-50; }
+  .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-[#d9ddd7] bg-white px-5 py-3 text-sm font-bold text-[#26332f] hover:border-[#174f3f] hover:bg-[#f8faf8]; }
+  .input { @apply w-full rounded-xl border border-[#dfe2dc] bg-white px-4 py-3 text-sm text-[#17221f] placeholder:text-[#98a19e]; }
+  .label { @apply mb-2 block text-sm font-bold text-[#36443f]; }
+  .card { @apply rounded-2xl border border-black/6 bg-white shadow-[0_10px_40px_rgba(37,53,47,.06)]; }
+  .eyebrow { @apply text-xs font-extrabold uppercase tracking-[.18em] text-[#27775f]; }
+}
+
+.soft-grid {
+  background-image: radial-gradient(circle at 1px 1px, rgba(23,79,63,.09) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+.noise { position: relative; }
+.noise::after { content: ""; position: absolute; inset: 0; opacity: .16; pointer-events: none; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.12'/%3E%3C/svg%3E"); }
+
+@keyframes float { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-8px) rotate(1deg); } }
+.float-card { animation: float 5s ease-in-out infinite; }
