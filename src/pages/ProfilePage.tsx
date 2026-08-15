@@ -40,8 +40,7 @@ export function ProfilePage() {
       displayName: String(fd.get("displayName")),
       birthDate: String(fd.get("birthDate") || "") || undefined,
       gender: (String(fd.get("gender") || "") || undefined) as
-        | Gender
-        | undefined,
+        Gender | undefined,
       bio: String(fd.get("bio") || "") || undefined,
       city: String(fd.get("city")),
       countryCode: String(fd.get("countryCode")),

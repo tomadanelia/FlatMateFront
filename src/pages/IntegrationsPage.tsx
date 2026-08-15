@@ -1,14 +1,328 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { Check, ExternalLink, Film, Music2, Plus, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
-import { toast } from 'sonner'
-import { Loading } from '../components/Loading'
-import { useAuth } from '../context/AuthContext'
-import { api, friendlyError } from '../lib/api'
-import type { IntegrationProvider, UserProfile } from '../types'
+import { useEffect, useState, type FormEvent } from "react";
+import {
+  Check,
+  ExternalLink,
+  Film,
+  Music2,
+  Plus,
+  RefreshCw,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Loading } from "../components/Loading";
+import { useAuth } from "../context/AuthContext";
+import { api, friendlyError } from "../lib/api";
+import type { IntegrationProvider, UserProfile } from "../types";
 
-type TasteItem={externalId:string;kind:string;name:string;artists:string[];genres:string[];score:number}
-const providerInfo={SPOTIFY:{name:'Spotify',description:'Music, artists and genres you come back to.',icon:Music2,color:'bg-[#dff5e8] text-[#19874f]'},LETTERBOXD:{name:'Letterboxd',description:'Films and stories that feel like you.',icon:Film,color:'bg-[#fff0e5] text-[#c45e32]'}} as const
+type TasteItem = {
+  externalId: string;
+  kind: string;
+  name: string;
+  artists: string[];
+  genres: string[];
+  score: number;
+};
+const providerInfo = {
+  SPOTIFY: {
+    name: "Spotify",
+    description: "Music, artists and genres you come back to.",
+    icon: Music2,
+    color: "bg-[#dff5e8] text-[#19874f]",
+  },
+  LETTERBOXD: {
+    name: "Letterboxd",
+    description: "Films and stories that feel like you.",
+    icon: Film,
+    color: "bg-[#fff0e5] text-[#c45e32]",
+  },
+} as const;
 
-export function IntegrationsPage(){const{user}=useAuth();const[profile,setProfile]=useState<UserProfile|null>();const[connecting,setConnecting]=useState<IntegrationProvider|null>(null);const[selected,setSelected]=useState<IntegrationProvider>('SPOTIFY');const[username,setUsername]=useState('');const[items,setItems]=useState<TasteItem[]>([]);const[syncing,setSyncing]=useState(false);useEffect(()=>{if(user)api.getUser(user.id).then(setProfile).catch(e=>{toast.error(friendlyError(e));setProfile(null)})},[user?.id]);if(profile===undefined)return <Loading/>;const connected=(p:IntegrationProvider)=>profile?.integrations?.find(x=>x.provider===p&&x.status==='CONNECTED');async function connect(provider:IntegrationProvider,e:FormEvent){e.preventDefault();if(!user)return;setConnecting(provider);try{await api.connectIntegration({userId:user.id,provider,...(username&&{username})});toast.success(`${providerInfo[provider].name} connected`);setUsername('');setProfile(await api.getUser(user.id))}catch(err){toast.error(friendlyError(err))}finally{setConnecting(null)}}function addItem(){setItems([...items,{externalId:crypto.randomUUID(),kind:selected==='SPOTIFY'?'artist':'film',name:'',artists:[],genres:[],score:1}])}async function sync(){if(!user)return;if(items.some(x=>!x.name.trim())){toast.error('Give every taste item a name');return}setSyncing(true);try{const result=await api.syncTaste({userId:user.id,provider:selected,items:items.map(x=>({...x,name:x.name.trim()}))});toast.success(`${result.synced} taste item${result.synced===1?'':'s'} synced`);setProfile(await api.getUser(user.id))}catch(err){toast.error(friendlyError(err))}finally{setSyncing(false)}}return <div><div className="max-w-2xl"><p className="eyebrow">Make matching more personal</p><h1 className="mt-2 font-[var(--font-display)] text-4xl font-extrabold tracking-tight">Your taste tells a story.</h1><p className="mt-3 leading-7 text-[#71807b]">Add the music and films you love. Shared taste is one more way we find the people you’ll naturally click with.</p></div><div className="mt-8 grid gap-5 md:grid-cols-2">{(Object.keys(providerInfo) as IntegrationProvider[]).map(provider=>{const info=providerInfo[provider],Icon=info.icon,status=connected(provider);return <div key={provider} className="card p-6"><div className="flex items-start justify-between"><span className={`grid size-13 place-items-center rounded-2xl ${info.color}`}><Icon size={24}/></span>{status&&<span className="flex items-center gap-1.5 rounded-full bg-[#e5f3ed] px-3 py-1.5 text-[10px] font-extrabold uppercase text-[#27775f]"><Check size={12}/> Connected</span>}</div><h2 className="mt-5 font-[var(--font-display)] text-xl font-extrabold">{info.name}</h2><p className="mt-2 text-sm leading-6 text-[#71807b]">{info.description}</p>{status?<div className="mt-5 rounded-xl bg-[#f4f6f3] p-3"><p className="text-xs font-bold text-[#34423d]">{status.username||'Identity connected'}</p><p className="mt-1 text-[11px] text-[#8a9591]">{status.lastSyncedAt?`Last synced ${new Date(status.lastSyncedAt).toLocaleDateString()}`:'Ready to sync taste data'}</p></div>:<form onSubmit={e=>connect(provider,e)} className="mt-5 flex gap-2"><input className="input" placeholder={`${info.name} username (optional)`} value={connecting===provider?username:''} onFocus={()=>setConnecting(provider)} onChange={e=>{setConnecting(provider);setUsername(e.target.value)}}/><button disabled={connecting===provider&&!username&&false} className="btn-primary !px-4">{connecting===provider?'Connect':'Connect'} <ExternalLink size={15}/></button></form>}</div>})}</div>
-    <section className="card mt-7 p-6 sm:p-7"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><p className="eyebrow">Taste library</p><h2 className="mt-2 font-[var(--font-display)] text-2xl font-extrabold">Teach the matcher what you love</h2></div><select className="input !w-auto" value={selected} onChange={e=>{setSelected(e.target.value as IntegrationProvider);setItems([])}}><option value="SPOTIFY">Spotify</option><option value="LETTERBOXD">Letterboxd</option></select></div>{!connected(selected)?<div className="mt-6 rounded-2xl border border-dashed border-[#bfd1c9] bg-[#f6faf8] p-8 text-center"><Sparkles className="mx-auto text-[#27775f]"/><p className="mt-3 text-sm font-bold">Connect {providerInfo[selected].name} first</p><p className="mt-1 text-xs text-[#82908b]">An integration identity is required before taste data can be synced.</p></div>:<><div className="mt-6 space-y-3">{items.map((item,i)=><div key={item.externalId} className="grid gap-2 rounded-2xl bg-[#f4f6f3] p-3 sm:grid-cols-[120px_1fr_1fr_auto]"><select className="input" value={item.kind} onChange={e=>setItems(items.map((x,j)=>j===i?{...x,kind:e.target.value}:x))}>{selected==='SPOTIFY'?<><option value="artist">Artist</option><option value="track">Track</option><option value="genre">Genre</option></>:<><option value="film">Film</option><option value="genre">Genre</option><option value="director">Director</option></>}</select><input className="input" placeholder="Name" value={item.name} onChange={e=>setItems(items.map((x,j)=>j===i?{...x,name:e.target.value}:x))}/><input className="input" placeholder="Genres, comma separated" value={item.genres.join(', ')} onChange={e=>setItems(items.map((x,j)=>j===i?{...x,genres:e.target.value.split(',').map(v=>v.trim()).filter(Boolean)}:x))}/><button onClick={()=>setItems(items.filter((_,j)=>j!==i))} className="grid size-11 place-items-center rounded-xl text-[#c35e4a] hover:bg-[#ffebe6]" aria-label="Remove"><Trash2 size={17}/></button></div>)}</div><div className="mt-5 flex flex-wrap justify-between gap-3"><button onClick={addItem} className="btn-secondary"><Plus size={16}/> Add taste item</button><button onClick={sync} disabled={syncing||items.length===0} className="btn-primary"><RefreshCw size={16} className={syncing?'animate-spin':''}/>{syncing?'Syncing…':`Sync ${items.length} item${items.length===1?'':'s'}`}</button></div></>}</section>
-  </div>}
+export function IntegrationsPage() {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>();
+  const [connecting, setConnecting] = useState<IntegrationProvider | null>(
+    null,
+  );
+  const [selected, setSelected] = useState<IntegrationProvider>("SPOTIFY");
+  const [username, setUsername] = useState("");
+  const [items, setItems] = useState<TasteItem[]>([]);
+  const [syncing, setSyncing] = useState(false);
+  useEffect(() => {
+    if (user)
+      api
+        .getUser(user.id)
+        .then(setProfile)
+        .catch((e) => {
+          toast.error(friendlyError(e));
+          setProfile(null);
+        });
+  }, [user?.id]);
+  if (profile === undefined) return <Loading />;
+  const connected = (p: IntegrationProvider) =>
+    profile?.integrations?.find(
+      (x) => x.provider === p && x.status === "CONNECTED",
+    );
+  async function connect(provider: IntegrationProvider, e: FormEvent) {
+    e.preventDefault();
+    if (!user) return;
+    setConnecting(provider);
+    try {
+      await api.connectIntegration({
+        userId: user.id,
+        provider,
+        ...(username && { username }),
+      });
+      toast.success(`${providerInfo[provider].name} connected`);
+      setUsername("");
+      setProfile(await api.getUser(user.id));
+    } catch (err) {
+      toast.error(friendlyError(err));
+    } finally {
+      setConnecting(null);
+    }
+  }
+  function addItem() {
+    setItems([
+      ...items,
+      {
+        externalId: crypto.randomUUID(),
+        kind: selected === "SPOTIFY" ? "artist" : "film",
+        name: "",
+        artists: [],
+        genres: [],
+        score: 1,
+      },
+    ]);
+  }
+  async function sync() {
+    if (!user) return;
+    if (items.some((x) => !x.name.trim())) {
+      toast.error("Give every taste item a name");
+      return;
+    }
+    setSyncing(true);
+    try {
+      const result = await api.syncTaste({
+        userId: user.id,
+        provider: selected,
+        items: items.map((x) => ({ ...x, name: x.name.trim() })),
+      });
+      toast.success(
+        `${result.synced} taste item${result.synced === 1 ? "" : "s"} synced`,
+      );
+      setProfile(await api.getUser(user.id));
+    } catch (err) {
+      toast.error(friendlyError(err));
+    } finally {
+      setSyncing(false);
+    }
+  }
+  return (
+    <div>
+      <div className="max-w-2xl">
+        <p className="eyebrow">Make matching more personal</p>
+        <h1 className="mt-2 font-[var(--font-display)] text-4xl font-extrabold tracking-tight">
+          Your taste tells a story.
+        </h1>
+        <p className="mt-3 leading-7 text-[#71807b]">
+          Add the music and films you love. Shared taste is one more way we find
+          the people you’ll naturally click with.
+        </p>
+      </div>
+      <div className="mt-8 grid gap-5 md:grid-cols-2">
+        {(Object.keys(providerInfo) as IntegrationProvider[]).map(
+          (provider) => {
+            const info = providerInfo[provider],
+              Icon = info.icon,
+              status = connected(provider);
+            return (
+              <div key={provider} className="card p-6">
+                <div className="flex items-start justify-between">
+                  <span
+                    className={`grid size-13 place-items-center rounded-2xl ${info.color}`}
+                  >
+                    <Icon size={24} />
+                  </span>
+                  {status && (
+                    <span className="flex items-center gap-1.5 rounded-full bg-[#e5f3ed] px-3 py-1.5 text-[10px] font-extrabold uppercase text-[#27775f]">
+                      <Check size={12} /> Connected
+                    </span>
+                  )}
+                </div>
+                <h2 className="mt-5 font-[var(--font-display)] text-xl font-extrabold">
+                  {info.name}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-[#71807b]">
+                  {info.description}
+                </p>
+                {status ? (
+                  <div className="mt-5 rounded-xl bg-[#f4f6f3] p-3">
+                    <p className="text-xs font-bold text-[#34423d]">
+                      {status.username || "Identity connected"}
+                    </p>
+                    <p className="mt-1 text-[11px] text-[#8a9591]">
+                      {status.lastSyncedAt
+                        ? `Last synced ${new Date(status.lastSyncedAt).toLocaleDateString()}`
+                        : "Ready to sync taste data"}
+                    </p>
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={(e) => connect(provider, e)}
+                    className="mt-5 flex gap-2"
+                  >
+                    <input
+                      className="input"
+                      placeholder={`${info.name} username (optional)`}
+                      value={connecting === provider ? username : ""}
+                      onFocus={() => setConnecting(provider)}
+                      onChange={(e) => {
+                        setConnecting(provider);
+                        setUsername(e.target.value);
+                      }}
+                    />
+                    <button
+                      disabled={connecting === provider && !username && false}
+                      className="btn-primary !px-4"
+                    >
+                      {connecting === provider ? "Connect" : "Connect"}{" "}
+                      <ExternalLink size={15} />
+                    </button>
+                  </form>
+                )}
+              </div>
+            );
+          },
+        )}
+      </div>
+      <section className="card mt-7 p-6 sm:p-7">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <p className="eyebrow">Taste library</p>
+            <h2 className="mt-2 font-[var(--font-display)] text-2xl font-extrabold">
+              Teach the matcher what you love
+            </h2>
+          </div>
+          <select
+            className="input !w-auto"
+            value={selected}
+            onChange={(e) => {
+              setSelected(e.target.value as IntegrationProvider);
+              setItems([]);
+            }}
+          >
+            <option value="SPOTIFY">Spotify</option>
+            <option value="LETTERBOXD">Letterboxd</option>
+          </select>
+        </div>
+        {!connected(selected) ? (
+          <div className="mt-6 rounded-2xl border border-dashed border-[#bfd1c9] bg-[#f6faf8] p-8 text-center">
+            <Sparkles className="mx-auto text-[#27775f]" />
+            <p className="mt-3 text-sm font-bold">
+              Connect {providerInfo[selected].name} first
+            </p>
+            <p className="mt-1 text-xs text-[#82908b]">
+              An integration identity is required before taste data can be
+              synced.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="mt-6 space-y-3">
+              {items.map((item, i) => (
+                <div
+                  key={item.externalId}
+                  className="grid gap-2 rounded-2xl bg-[#f4f6f3] p-3 sm:grid-cols-[120px_1fr_1fr_auto]"
+                >
+                  <select
+                    className="input"
+                    value={item.kind}
+                    onChange={(e) =>
+                      setItems(
+                        items.map((x, j) =>
+                          j === i ? { ...x, kind: e.target.value } : x,
+                        ),
+                      )
+                    }
+                  >
+                    {selected === "SPOTIFY" ? (
+                      <>
+                        <option value="artist">Artist</option>
+                        <option value="track">Track</option>
+                        <option value="genre">Genre</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="film">Film</option>
+                        <option value="genre">Genre</option>
+                        <option value="director">Director</option>
+                      </>
+                    )}
+                  </select>
+                  <input
+                    className="input"
+                    placeholder="Name"
+                    value={item.name}
+                    onChange={(e) =>
+                      setItems(
+                        items.map((x, j) =>
+                          j === i ? { ...x, name: e.target.value } : x,
+                        ),
+                      )
+                    }
+                  />
+                  <input
+                    className="input"
+                    placeholder="Genres, comma separated"
+                    value={item.genres.join(", ")}
+                    onChange={(e) =>
+                      setItems(
+                        items.map((x, j) =>
+                          j === i
+                            ? {
+                                ...x,
+                                genres: e.target.value
+                                  .split(",")
+                                  .map((v) => v.trim())
+                                  .filter(Boolean),
+                              }
+                            : x,
+                        ),
+                      )
+                    }
+                  />
+                  <button
+                    onClick={() => setItems(items.filter((_, j) => j !== i))}
+                    className="grid size-11 place-items-center rounded-xl text-[#c35e4a] hover:bg-[#ffebe6]"
+                    aria-label="Remove"
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 flex flex-wrap justify-between gap-3">
+              <button onClick={addItem} className="btn-secondary">
+                <Plus size={16} /> Add taste item
+              </button>
+              <button
+                onClick={sync}
+                disabled={syncing || items.length === 0}
+                className="btn-primary"
+              >
+                <RefreshCw
+                  size={16}
+                  className={syncing ? "animate-spin" : ""}
+                />
+                {syncing
+                  ? "Syncing…"
+                  : `Sync ${items.length} item${items.length === 1 ? "" : "s"}`}
+              </button>
+            </div>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
