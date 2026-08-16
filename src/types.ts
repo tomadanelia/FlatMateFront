@@ -26,6 +26,22 @@ export interface IntegrationSummary {
   status: IntegrationStatus; lastSyncedAt: string | null
 }
 
+export interface LetterboxdFavorite {
+  externalId: string
+  title: string
+  year: number | null
+  posterUrl: string | null
+  filmUrl: string
+}
+
+export interface LetterboxdIntegration {
+  provider: IntegrationProvider
+  username: string
+  profileUrl: string
+  lastSyncedAt: string
+  favorites: LetterboxdFavorite[]
+}
+
 export interface UserProfile extends SessionUser {
   birthDate: string | null; gender: Gender | null; bio: string | null
   avatarUrl: string | null; isDiscoverable: boolean; onboardingComplete: boolean

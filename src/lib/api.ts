@@ -3,6 +3,7 @@ import type {
   AlgorithmKey,
   AuthResponse,
   IntegrationProvider,
+  LetterboxdIntegration,
   MatchSearchResponse,
   ProfileInput,
   Question,
@@ -102,6 +103,15 @@ export const api = {
       method: "POST",
       body: JSON.stringify(input),
     }),
+  connectLetterboxd: (input: { userId: string; username: string }) =>
+    request<LetterboxdIntegration>("/api/integrations/letterboxd/connect", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  getLetterboxdFavorites: (userId: string) =>
+    request<LetterboxdIntegration>(
+      `/api/integrations/letterboxd/${encodeURIComponent(userId)}/favorites`,
+    ),
   syncTaste: (input: {
     userId: string;
     provider: IntegrationProvider;

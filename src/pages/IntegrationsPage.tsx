@@ -13,7 +13,11 @@ import { toast } from "sonner";
 import { Loading } from "../components/Loading";
 import { useAuth } from "../context/AuthContext";
 import { api, friendlyError } from "../lib/api";
-import type { IntegrationProvider, UserProfile } from "../types";
+import type {
+  IntegrationProvider,
+  LetterboxdIntegration,
+  UserProfile,
+} from "../types";
 
 type TasteItem = {
   externalId: string;
@@ -40,6 +44,7 @@ const providerInfo = {
 
 export function IntegrationsPage() {
   const { user } = useAuth();
+  const userId = user?.id;
   const [profile, setProfile] = useState<UserProfile | null>();
   const [connecting, setConnecting] = useState<IntegrationProvider | null>(
     null,
@@ -48,16 +53,45 @@ export function IntegrationsPage() {
   const [username, setUsername] = useState("");
   const [items, setItems] = useState<TasteItem[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [letterboxd, setLetterboxd] =
+    useState<LetterboxdIntegration | null>(null);
+  const [loadingFavorites, setLoadingFavorites] = useState(false);
   useEffect(() => {
-    if (user)
-      api
-        .getUser(user.id)
-        .then(setProfile)
-        .catch((e) => {
-          toast.error(friendlyError(e));
-          setProfile(null);
-        });
-  }, [user?.id]);
+    if (!userId) return;
+    let cancelled = false;
+    api
+      .getUser(userId)
+      .then(async (nextProfile) => {
+        if (cancelled) return;
+        setProfile(nextProfile);
+        const hasLetterboxd = nextProfile?.integrations?.some(
+          (integration) =>
+            integration.provider === "LETTERBOXD" &&
+            integration.status === "CONNECTED",
+        );
+        if (!hasLetterboxd) {
+          setLetterboxd(null);
+          return;
+        }
+        setLoadingFavorites(true);
+        try {
+          const stored = await api.getLetterboxdFavorites(userId);
+          if (!cancelled) setLetterboxd(stored);
+        } catch (error) {
+          if (!cancelled) toast.error(friendlyError(error));
+        } finally {
+          if (!cancelled) setLoadingFavorites(false);
+        }
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        toast.error(friendlyError(e));
+        setProfile(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
   if (profile === undefined) return <Loading />;
   const connected = (p: IntegrationProvider) =>
     profile?.integrations?.find(
@@ -68,11 +102,19 @@ export function IntegrationsPage() {
     if (!user) return;
     setConnecting(provider);
     try {
-      await api.connectIntegration({
-        userId: user.id,
-        provider,
-        ...(username && { username }),
-      });
+      if (provider === "LETTERBOXD") {
+        const result = await api.connectLetterboxd({
+          userId: user.id,
+          username: username.trim(),
+        });
+        setLetterboxd(result);
+      } else {
+        await api.connectIntegration({
+          userId: user.id,
+          provider,
+          ...(username && { username }),
+        });
+      }
       toast.success(`${providerInfo[provider].name} connected`);
       setUsername("");
       setProfile(await api.getUser(user.id));
@@ -174,7 +216,8 @@ export function IntegrationsPage() {
                   >
                     <input
                       className="input"
-                      placeholder={`${info.name} username (optional)`}
+                      placeholder={`${info.name} username${provider === "LETTERBOXD" ? "" : " (optional)"}`}
+                      required={provider === "LETTERBOXD"}
                       value={connecting === provider ? username : ""}
                       onFocus={() => setConnecting(provider)}
                       onChange={(e) => {
@@ -183,7 +226,9 @@ export function IntegrationsPage() {
                       }}
                     />
                     <button
-                      disabled={connecting === provider && !username && false}
+                      disabled={
+                        provider === "LETTERBOXD" && !username.trim()
+                      }
                       className="btn-primary !px-4"
                     >
                       {connecting === provider ? "Connect" : "Connect"}{" "}
@@ -196,6 +241,72 @@ export function IntegrationsPage() {
           },
         )}
       </div>
+      {connected("LETTERBOXD") && (
+        <section className="card mt-7 p-6 sm:p-7">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="eyebrow">Letterboxd favorites</p>
+              <h2 className="mt-2 font-[var(--font-display)] text-2xl font-extrabold">
+                Films you love
+              </h2>
+            </div>
+            {letterboxd?.profileUrl && (
+              <a
+                href={letterboxd.profileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-secondary"
+              >
+                View profile <ExternalLink size={15} />
+              </a>
+            )}
+          </div>
+          {loadingFavorites ? (
+            <div className="mt-6 flex items-center gap-3 rounded-2xl bg-[#f4f6f3] p-6 text-sm font-bold text-[#71807b]">
+              <RefreshCw size={17} className="animate-spin" />
+              Loading favorite films...
+            </div>
+          ) : letterboxd?.favorites.length ? (
+            <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {letterboxd.favorites.map((favorite) => (
+                <a
+                  key={favorite.externalId}
+                  href={favorite.filmUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group overflow-hidden rounded-2xl bg-[#f4f6f3]"
+                >
+                  {favorite.posterUrl ? (
+                    <img
+                      src={favorite.posterUrl}
+                      alt={`Poster for ${favorite.title}`}
+                      className="aspect-[2/3] w-full object-cover transition group-hover:scale-[1.02]"
+                    />
+                  ) : (
+                    <span className="grid aspect-[2/3] place-items-center bg-[#e8ede9] text-[#71807b]">
+                      <Film size={32} />
+                    </span>
+                  )}
+                  <span className="block p-3">
+                    <span className="block text-sm font-extrabold text-[#34423d]">
+                      {favorite.title}
+                    </span>
+                    {favorite.year && (
+                      <span className="mt-1 block text-xs text-[#82908b]">
+                        {favorite.year}
+                      </span>
+                    )}
+                  </span>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-6 rounded-2xl bg-[#f4f6f3] p-6 text-sm text-[#71807b]">
+              No favorite films are stored for this Letterboxd profile yet.
+            </p>
+          )}
+        </section>
+      )}
       <section className="card mt-7 p-6 sm:p-7">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
