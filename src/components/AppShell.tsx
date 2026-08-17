@@ -12,6 +12,7 @@ import {
   Compass,
   HeartHandshake,
   Menu,
+  MessagesSquare,
   PlugZap,
   Settings,
   ShieldCheck,
@@ -21,9 +22,12 @@ import {
 } from "lucide-react";
 import { Brand } from "./Brand";
 import { useAuth } from "../context/AuthContext";
+import { useMessaging } from "../context/MessagingContext";
+import { ChatDock } from "./ChatDock";
 
 const links = [
   { to: "/app/discover", label: "Discover", icon: Compass },
+  { to: "/app/messages", label: "Messages", icon: MessagesSquare },
   { to: "/app/assessments", label: "Assessments", icon: Sparkles },
   { to: "/app/integrations", label: "My tastes", icon: PlugZap },
   { to: "/app/profile", label: "My profile", icon: UserRound },
@@ -31,6 +35,7 @@ const links = [
 
 export function AppShell() {
   const { user, logout } = useAuth();
+  const { unreadCount } = useMessaging();
   const [menu, setMenu] = useState(false);
   const [profileMenu, setProfileMenu] = useState(false);
   const navigate = useNavigate();
@@ -61,6 +66,7 @@ export function AppShell() {
               >
                 <Icon size={17} />
                 {label}
+                {to === "/app/messages" && unreadCount > 0 && <span className="grid min-w-5 place-items-center rounded-full bg-[#f18b6d] px-1.5 py-0.5 text-[10px] font-black text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
               </NavLink>
             ))}
             {user?.role === "ADMIN" && (
@@ -79,13 +85,14 @@ export function AppShell() {
             {current}
           </span>
           <div className="ml-auto flex items-center gap-2">
-            <button
+            <Link
+              to="/app/messages"
               className="relative grid size-10 place-items-center rounded-xl text-[#52605c] hover:bg-white"
-              aria-label="Notifications"
+              aria-label="Messages"
             >
               <Bell size={19} />
-              <span className="absolute right-2.5 top-2.5 size-1.5 rounded-full bg-[#ef8265]" />
-            </button>
+              {unreadCount > 0 && <span className="absolute right-2 top-1.5 grid min-w-4 place-items-center rounded-full border border-[#f7f6f0] bg-[#ef8265] px-1 text-[9px] font-black text-white">{unreadCount > 9 ? "9+" : unreadCount}</span>}
+            </Link>
             <div className="relative hidden sm:block">
               <button
                 onClick={() => setProfileMenu(!profileMenu)}
@@ -152,6 +159,7 @@ export function AppShell() {
               >
                 <Icon size={18} />
                 {label}
+                {to === "/app/messages" && unreadCount > 0 && <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-[#f18b6d] px-1.5 py-0.5 text-[10px] font-black text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
               </NavLink>
             ))}
           </nav>
@@ -166,6 +174,7 @@ export function AppShell() {
         </span>
         <span>© {new Date().getFullYear()} Havenly</span>
       </footer>
+      <ChatDock />
     </div>
   );
 }

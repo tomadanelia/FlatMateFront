@@ -14,6 +14,9 @@ import type {
   TestSummary,
   UserProfile,
   UserRole,
+  ChatMessage,
+  Conversation,
+  MessageHistory,
 } from "../types";
 
 const configuredBase = (
@@ -163,6 +166,30 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ role }),
     }),
+  getConversations: () =>
+    request<Conversation[]>("/api/messages/conversations"),
+  getOrCreateConversation: (recipientId: string) =>
+    request<Conversation>("/api/messages/conversations", {
+      method: "POST",
+      body: JSON.stringify({ recipientId }),
+    }),
+  getMessages: (conversationId: string, limit = 50, cursor?: string) => {
+    const query = new URLSearchParams({ limit: String(limit) });
+    if (cursor) query.set("cursor", cursor);
+    return request<MessageHistory>(
+      `/api/messages/conversations/${encodeURIComponent(conversationId)}?${query}`,
+    );
+  },
+  sendMessage: (conversationId: string, body: string) =>
+    request<ChatMessage>(
+      `/api/messages/conversations/${encodeURIComponent(conversationId)}`,
+      { method: "POST", body: JSON.stringify({ body }) },
+    ),
+  markConversationRead: (conversationId: string) =>
+    request<unknown>(
+      `/api/messages/conversations/${encodeURIComponent(conversationId)}/read`,
+      { method: "PATCH" },
+    ),
 };
 
 export function friendlyError(error: unknown) {

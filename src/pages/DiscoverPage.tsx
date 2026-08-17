@@ -4,9 +4,10 @@ import {
   BedDouble,
   Cat,
   Check,
-  ChevronDown,
   Heart,
   MapPin,
+  MessageCircle,
+  LoaderCircle,
   RefreshCw,
   Search,
   SlidersHorizontal,
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 import { EmptyState } from "../components/EmptyState";
 import { Loading } from "../components/Loading";
 import { useAuth } from "../context/AuthContext";
+import { useMessaging } from "../context/MessagingContext";
 import { api, friendlyError } from "../lib/api";
 import type { AlgorithmKey, MatchResult, UserProfile } from "../types";
 
@@ -234,6 +236,9 @@ function MatchCard({
   saved: boolean;
   onSave: () => void;
 }) {
+  const navigate = useNavigate();
+  const { openConversation } = useMessaging();
+  const [openingChat, setOpeningChat] = useState(false);
   const percent = Math.round(match.score * 100);
   const lifestyle = match.breakdown.find((b) => b.key === "LIFESTYLE");
   const initials = (match.user.displayName || "Havenly member")
@@ -306,12 +311,22 @@ function MatchCard({
           </div>
         )}
         <button
-          onClick={() =>
-            toast.info("Messaging is not available in the current backend API.")
-          }
+          onClick={async () => {
+            setOpeningChat(true);
+            try {
+              const conversation = await openConversation(match.user.id);
+              navigate(`/app/messages/${conversation.id}`);
+            } catch (error) {
+              toast.error(friendlyError(error));
+            } finally {
+              setOpeningChat(false);
+            }
+          }}
+          disabled={openingChat}
           className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#174f3f] py-3 text-sm font-bold text-white group-hover:bg-[#103e31]"
         >
-          View compatibility <ChevronDown size={16} />
+          {openingChat ? <LoaderCircle size={16} className="animate-spin" /> : <MessageCircle size={16} />}
+          {openingChat ? "Opening conversation…" : `Message ${match.user.displayName?.split(" ")[0] || "match"}`}
         </button>
       </div>
     </article>

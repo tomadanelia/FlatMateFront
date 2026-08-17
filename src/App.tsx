@@ -10,6 +10,7 @@ import { LandingPage } from './pages/LandingPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { TestPage } from './pages/TestPage'
+import { MessagesPage } from './pages/MessagesPage'
 
 export function App(){return <Routes>
   <Route path="/" element={<LandingPage/>}/>
@@ -23,6 +24,8 @@ export function App(){return <Routes>
       <Route path="/app/assessments/:slug" element={<TestPage/>}/>
       <Route path="/app/integrations" element={<IntegrationsPage/>}/>
       <Route path="/app/profile" element={<ProfilePage/>}/>
+      <Route path="/app/messages" element={<MessagesPage/>}/>
+      <Route path="/app/messages/:conversationId" element={<MessagesPage/>}/>
       <Route element={<ProtectedRoute admin/>}><Route path="/admin" element={<AdminPage/>}/></Route>
     </Route>
   </Route>

@@ -91,3 +91,45 @@ export interface QuestionInput {
   reverseScored?: boolean; position: number; options?: unknown[]
   minValue?: number; maxValue?: number; weight?: number
 }
+
+export interface MessageParticipant {
+  id: string
+  displayName: string | null
+  avatarUrl: string | null
+}
+
+export interface ChatMessage {
+  id: string
+  conversationId: string
+  senderId: string
+  body: string
+  readAt: string | null
+  createdAt: string
+  sender: MessageParticipant
+}
+
+export interface Conversation {
+  id: string
+  participantOneId: string
+  participantTwoId: string
+  lastMessageAt: string | null
+  createdAt: string
+  updatedAt: string
+  participantOne: MessageParticipant
+  participantTwo: MessageParticipant
+  messages?: ChatMessage[]
+  _count?: { messages: number }
+}
+
+export interface MessageHistory {
+  items: ChatMessage[]
+  nextCursor: string | null
+}
+
+export interface ConversationReadReceipt {
+  conversationId: string
+  userId: string
+  readAt: string
+  updated: number
+  participantIds: string[]
+}
