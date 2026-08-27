@@ -2,8 +2,7 @@ import type {
   AlgorithmConfig,
   AlgorithmKey,
   AuthResponse,
-  IntegrationProvider,
-  LetterboxdIntegration,
+  ArtistSearchResult,
   MatchSearchResponse,
   ProfileInput,
   Question,
@@ -14,6 +13,10 @@ import type {
   TestSummary,
   UserProfile,
   UserRole,
+  UserTastes,
+  MusicGenre,
+  MovieGenre,
+  MovieSearchResult,
   ChatMessage,
   Conversation,
   MessageHistory,
@@ -97,39 +100,35 @@ export const api = {
       method: "POST",
       body: JSON.stringify(input),
     }),
-  connectIntegration: (input: {
-    userId: string;
-    provider: IntegrationProvider;
-    username?: string;
-  }) =>
-    request("/api/integrations/connect", {
-      method: "POST",
-      body: JSON.stringify(input),
-    }),
-  connectLetterboxd: (input: { userId: string; username: string }) =>
-    request<LetterboxdIntegration>("/api/integrations/letterboxd/connect", {
-      method: "POST",
-      body: JSON.stringify(input),
-    }),
-  getLetterboxdFavorites: (userId: string) =>
-    request<LetterboxdIntegration>(
-      `/api/integrations/letterboxd/${encodeURIComponent(userId)}/favorites`,
+  getMusicGenres: () => request<MusicGenre[]>("/api/music-genres"),
+  searchArtists: (search: string, limit = 20) =>
+    request<ArtistSearchResult[]>(
+      `/api/artists?${new URLSearchParams({ search, limit: String(limit) })}`,
     ),
-  syncTaste: (input: {
-    userId: string;
-    provider: IntegrationProvider;
-    items: {
-      externalId: string;
-      kind: string;
-      name: string;
-      artists?: string[];
-      genres?: string[];
-      score?: number;
-    }[];
-  }) =>
-    request<{ synced: number }>("/api/integrations/taste/sync", {
-      method: "POST",
-      body: JSON.stringify(input),
+  getMovieGenres: () => request<MovieGenre[]>("/api/movie-genres"),
+  searchMovies: (search: string, limit = 20) =>
+    request<MovieSearchResult[]>(
+      `/api/movies?${new URLSearchParams({ search, limit: String(limit) })}`,
+    ),
+  getTastes: (userId: string) =>
+    request<UserTastes>(`/api/tastes/${encodeURIComponent(userId)}`),
+  saveMusicTastes: (
+    userId: string,
+    musicGenreIds: string[],
+    artistIds: string[],
+  ) =>
+    request<unknown>(`/api/users/${encodeURIComponent(userId)}/music-tastes`, {
+      method: "PUT",
+      body: JSON.stringify({ musicGenreIds, artistIds }),
+    }),
+  saveMovieTastes: (
+    userId: string,
+    movieGenreIds: string[],
+    movieIds: string[],
+  ) =>
+    request<unknown>(`/api/users/${encodeURIComponent(userId)}/movie-tastes`, {
+      method: "PUT",
+      body: JSON.stringify({ movieGenreIds, movieIds }),
     }),
   searchMatches: (input: {
     userId: string;

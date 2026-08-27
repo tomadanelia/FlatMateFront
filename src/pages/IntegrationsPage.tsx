@@ -1,439 +1,403 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import {
   Check,
-  ExternalLink,
   Film,
+  LoaderCircle,
   Music2,
-  Plus,
-  RefreshCw,
+  Search,
   Sparkles,
-  Trash2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Loading } from "../components/Loading";
 import { useAuth } from "../context/AuthContext";
 import { api, friendlyError } from "../lib/api";
 import type {
-  IntegrationProvider,
-  LetterboxdIntegration,
-  UserProfile,
+  ArtistSearchResult,
+  MovieSearchResult,
+  MusicGenre,
+  MovieGenre,
+  UserTastes,
 } from "../types";
 
-type TasteItem = {
-  externalId: string;
-  kind: string;
-  name: string;
-  artists: string[];
-  genres: string[];
-  score: number;
+type SearchItem = ArtistSearchResult | MovieSearchResult;
+type SectionProps = {
+  title: string;
+  eyebrow: string;
+  description: string;
+  icon: typeof Music2;
+  accent: string;
+  genres: { id: string; name: string }[];
+  genreIds: string[];
+  onGenre: (id: string) => void;
+  search: string;
+  setSearch: (value: string) => void;
+  results: SearchItem[];
+  selected: SearchItem[];
+  onItem: (item: SearchItem) => void;
+  onSave: () => void;
+  saving: boolean;
+  itemLabel: string;
 };
-const providerInfo = {
-  SPOTIFY: {
-    name: "Spotify",
-    description: "Music, artists and genres you come back to.",
-    icon: Music2,
-    color: "bg-[#dff5e8] text-[#19874f]",
-  },
-  LETTERBOXD: {
-    name: "Letterboxd",
-    description: "Films and stories that feel like you.",
-    icon: Film,
-    color: "bg-[#fff0e5] text-[#c45e32]",
-  },
-} as const;
+
+function TasteSection({
+  title,
+  eyebrow,
+  description,
+  icon: Icon,
+  accent,
+  genres,
+  genreIds,
+  onGenre,
+  search,
+  setSearch,
+  results,
+  selected,
+  onItem,
+  onSave,
+  saving,
+  itemLabel,
+}: SectionProps) {
+  const selectedIds = selected.map((item) => item.id);
+  return (
+    <section className="card overflow-hidden">
+      <div className={`relative overflow-hidden p-6 sm:p-8 ${accent}`}>
+        <div className="absolute -right-7 -top-10 rotate-12 text-white/15">
+          <Icon size={180} strokeWidth={1} />
+        </div>
+        <div className="relative">
+          <span className="grid size-12 place-items-center rounded-2xl bg-white/75 text-[#174f3f] shadow-sm">
+            <Icon size={23} />
+          </span>
+          <p className="mt-7 text-[10px] font-extrabold uppercase tracking-[.2em] text-[#174f3f]/65">
+            {eyebrow}
+          </p>
+          <h2 className="mt-2 font-[var(--font-display)] text-2xl font-extrabold text-[#174f3f]">
+            {title}
+          </h2>
+          <p className="mt-2 max-w-md text-sm leading-6 text-[#174f3f]/70">
+            {description}
+          </p>
+        </div>
+      </div>
+      <div className="space-y-7 p-6 sm:p-8">
+        <div>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-extrabold text-[#34423d]">Genres</p>
+              <p className="mt-1 text-xs text-[#82908b]">
+                Pick everything that sounds or feels like you.
+              </p>
+            </div>
+            <span className="text-xs font-bold text-[#27775f]">
+              {genreIds.length} picked
+            </span>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {genres.map((genre) => {
+              const picked = genreIds.includes(genre.id);
+              return (
+                <button
+                  key={genre.id}
+                  type="button"
+                  onClick={() => onGenre(genre.id)}
+                  className={`rounded-full border px-3.5 py-2 text-xs font-bold ${picked ? "border-[#174f3f] bg-[#174f3f] text-white shadow-sm" : "border-[#dfe5df] bg-white text-[#596863] hover:border-[#9bbcaf] hover:bg-[#f6faf8]"}`}
+                >
+                  {picked && <Check size={13} className="mr-1 inline" />}
+                  {genre.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div>
+          <p className="text-sm font-extrabold text-[#34423d]">{itemLabel}</p>
+          <div className="relative mt-3">
+            <Search
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-[#91a099]"
+              size={17}
+            />
+            <input
+              className="input pl-11"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={`Search ${itemLabel.toLowerCase()}...`}
+              aria-label={`Search ${itemLabel.toLowerCase()}`}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-[#82908b] hover:bg-[#eef3ef]"
+                aria-label="Clear search"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+          {search.length > 1 && results.length > 0 && (
+            <div className="mt-2 max-h-52 overflow-y-auto rounded-2xl border border-[#e2e8e2] bg-white p-2 shadow-[0_12px_30px_rgba(37,53,47,.1)]">
+              {results.map((item) => {
+                const picked = selectedIds.includes(item.id);
+                const name = "title" in item ? item.title : item.name;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => onItem(item)}
+                    className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left hover:bg-[#f4f8f5]"
+                  >
+                    <span className="block text-sm font-bold text-[#34423d]">
+                      {name}
+                    </span>
+                    {picked ? (
+                      <Check size={17} className="shrink-0 text-[#27775f]" />
+                    ) : (
+                      <span className="text-xs font-bold text-[#27775f]">
+                        Add
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {search.length > 1 && results.length === 0 && (
+            <p className="mt-3 text-xs text-[#82908b]">
+              No results yet. Try another search.
+            </p>
+          )}
+          <div className="mt-4 flex flex-wrap gap-2">
+            {selected.map((item) => {
+              const name = "title" in item ? item.title : item.name;
+              return (
+                <span
+                  key={item.id}
+                  className="inline-flex items-center gap-2 rounded-full bg-[#eaf4ef] px-3 py-2 text-xs font-bold text-[#27775f]"
+                >
+                  {name}
+                  <button
+                    type="button"
+                    onClick={() => onItem(item)}
+                    aria-label={`Remove ${name}`}
+                  >
+                    <X size={14} />
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={saving}
+          className="btn-primary w-full sm:w-auto"
+        >
+          {saving ? (
+            <LoaderCircle size={16} className="animate-spin" />
+          ) : (
+            <Check size={16} />
+          )}
+          {saving ? "Saving choices..." : `Save ${eyebrow.toLowerCase()}`}
+        </button>
+      </div>
+    </section>
+  );
+}
 
 export function IntegrationsPage() {
   const { user } = useAuth();
-  const userId = user?.id;
-  const [profile, setProfile] = useState<UserProfile | null>();
-  const [connecting, setConnecting] = useState<IntegrationProvider | null>(
-    null,
-  );
-  const [selected, setSelected] = useState<IntegrationProvider>("SPOTIFY");
-  const [username, setUsername] = useState("");
-  const [items, setItems] = useState<TasteItem[]>([]);
-  const [syncing, setSyncing] = useState(false);
-  const [letterboxd, setLetterboxd] =
-    useState<LetterboxdIntegration | null>(null);
-  const [loadingFavorites, setLoadingFavorites] = useState(false);
+  const [genres, setGenres] = useState<MusicGenre[]>([]);
+  const [movieGenres, setMovieGenres] = useState<MovieGenre[]>([]);
+  const [tastes, setTastes] = useState<UserTastes | null>(null);
+  const [artistSearch, setArtistSearch] = useState("");
+  const [movieSearch, setMovieSearch] = useState("");
+  const [artists, setArtists] = useState<ArtistSearchResult[]>([]);
+  const [movies, setMovies] = useState<MovieSearchResult[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<"music" | "movies" | null>(null);
+
   useEffect(() => {
-    if (!userId) return;
-    let cancelled = false;
-    api
-      .getUser(userId)
-      .then(async (nextProfile) => {
-        if (cancelled) return;
-        setProfile(nextProfile);
-        const hasLetterboxd = nextProfile?.integrations?.some(
-          (integration) =>
-            integration.provider === "LETTERBOXD" &&
-            integration.status === "CONNECTED",
-        );
-        if (!hasLetterboxd) {
-          setLetterboxd(null);
-          return;
-        }
-        setLoadingFavorites(true);
-        try {
-          const stored = await api.getLetterboxdFavorites(userId);
-          if (!cancelled) setLetterboxd(stored);
-        } catch (error) {
-          if (!cancelled) toast.error(friendlyError(error));
-        } finally {
-          if (!cancelled) setLoadingFavorites(false);
-        }
+    if (!user) return;
+    Promise.all([
+      api.getMusicGenres(),
+      api.getMovieGenres(),
+      api.getTastes(user.id),
+    ])
+      .then(([music, films, selected]) => {
+        setGenres(music);
+        setMovieGenres(films);
+        setTastes(selected);
       })
-      .catch((e) => {
-        if (cancelled) return;
-        toast.error(friendlyError(e));
-        setProfile(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
-  if (profile === undefined) return <Loading />;
-  const connected = (p: IntegrationProvider) =>
-    profile?.integrations?.find(
-      (x) => x.provider === p && x.status === "CONNECTED",
-    );
-  async function connect(provider: IntegrationProvider, e: FormEvent) {
-    e.preventDefault();
-    if (!user) return;
-    setConnecting(provider);
-    try {
-      if (provider === "LETTERBOXD") {
-        const result = await api.connectLetterboxd({
-          userId: user.id,
-          username: username.trim(),
-        });
-        setLetterboxd(result);
-      } else {
-        await api.connectIntegration({
-          userId: user.id,
-          provider,
-          ...(username && { username }),
-        });
-      }
-      toast.success(`${providerInfo[provider].name} connected`);
-      setUsername("");
-      setProfile(await api.getUser(user.id));
-    } catch (err) {
-      toast.error(friendlyError(err));
-    } finally {
-      setConnecting(null);
-    }
-  }
-  function addItem() {
-    setItems([
-      ...items,
-      {
-        externalId: crypto.randomUUID(),
-        kind: selected === "SPOTIFY" ? "artist" : "film",
-        name: "",
-        artists: [],
-        genres: [],
-        score: 1,
-      },
-    ]);
-  }
-  async function sync() {
-    if (!user) return;
-    if (items.some((x) => !x.name.trim())) {
-      toast.error("Give every taste item a name");
+      .catch((error) => toast.error(friendlyError(error)))
+      .finally(() => setLoading(false));
+  }, [user]);
+  useEffect(() => {
+    if (artistSearch.trim().length < 2) {
+      setArtists([]);
       return;
     }
-    setSyncing(true);
+    const timeout = window.setTimeout(
+      () =>
+        api
+          .searchArtists(artistSearch.trim())
+          .then(setArtists)
+          .catch((error) => toast.error(friendlyError(error))),
+      280,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [artistSearch]);
+  useEffect(() => {
+    if (movieSearch.trim().length < 2) {
+      setMovies([]);
+      return;
+    }
+    const timeout = window.setTimeout(
+      () =>
+        api
+          .searchMovies(movieSearch.trim())
+          .then(setMovies)
+          .catch((error) => toast.error(friendlyError(error))),
+      280,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [movieSearch]);
+  if (loading || !tastes)
+    return <Loading label="Loading your taste profile..." />;
+  const musicGenreIds = tastes.musicGenres.map(
+      ({ musicGenre }) => musicGenre.id,
+    ),
+    movieGenreIds = tastes.movieGenres.map(({ movieGenre }) => movieGenre.id),
+    favoriteArtists = tastes.favoriteArtists.map(({ artist }) => artist),
+    favoriteMovies = tastes.favoriteMovies.map(({ movie }) => movie);
+  const toggle = (ids: string[], id: string) =>
+    ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id];
+  const toggleItem = <T extends { id: string }>(items: T[], item: T) =>
+    items.some((value) => value.id === item.id)
+      ? items.filter((value) => value.id !== item.id)
+      : [...items, item];
+  async function saveMusic() {
+    if (!user) return;
+    setSaving("music");
     try {
-      const result = await api.syncTaste({
-        userId: user.id,
-        provider: selected,
-        items: items.map((x) => ({ ...x, name: x.name.trim() })),
-      });
-      toast.success(
-        `${result.synced} taste item${result.synced === 1 ? "" : "s"} synced`,
+      await api.saveMusicTastes(
+        user.id,
+        musicGenreIds,
+        favoriteArtists.map((artist) => artist.id),
       );
-      setProfile(await api.getUser(user.id));
-    } catch (err) {
-      toast.error(friendlyError(err));
+      setTastes(await api.getTastes(user.id));
+      toast.success("Music taste updated");
+    } catch (error) {
+      toast.error(friendlyError(error));
     } finally {
-      setSyncing(false);
+      setSaving(null);
+    }
+  }
+  async function saveMovies() {
+    if (!user) return;
+    setSaving("movies");
+    try {
+      await api.saveMovieTastes(
+        user.id,
+        movieGenreIds,
+        favoriteMovies.map((movie) => movie.id),
+      );
+      setTastes(await api.getTastes(user.id));
+      toast.success("Movie taste updated");
+    } catch (error) {
+      toast.error(friendlyError(error));
+    } finally {
+      setSaving(null);
     }
   }
   return (
-    <div>
-      <div className="max-w-2xl">
-        <p className="eyebrow">Make matching more personal</p>
-        <h1 className="mt-2 font-[var(--font-display)] text-4xl font-extrabold tracking-tight">
-          Your taste tells a story.
-        </h1>
-        <p className="mt-3 leading-7 text-[#71807b]">
-          Add the music and films you love. Shared taste is one more way we find
-          the people you’ll naturally click with.
-        </p>
-      </div>
-      <div className="mt-8 grid gap-5 md:grid-cols-2">
-        {(Object.keys(providerInfo) as IntegrationProvider[]).map(
-          (provider) => {
-            const info = providerInfo[provider],
-              Icon = info.icon,
-              status = connected(provider);
-            return (
-              <div key={provider} className="card p-6">
-                <div className="flex items-start justify-between">
-                  <span
-                    className={`grid size-13 place-items-center rounded-2xl ${info.color}`}
-                  >
-                    <Icon size={24} />
-                  </span>
-                  {status && (
-                    <span className="flex items-center gap-1.5 rounded-full bg-[#e5f3ed] px-3 py-1.5 text-[10px] font-extrabold uppercase text-[#27775f]">
-                      <Check size={12} /> Connected
-                    </span>
-                  )}
-                </div>
-                <h2 className="mt-5 font-[var(--font-display)] text-xl font-extrabold">
-                  {info.name}
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-[#71807b]">
-                  {info.description}
-                </p>
-                {status ? (
-                  <div className="mt-5 rounded-xl bg-[#f4f6f3] p-3">
-                    <p className="text-xs font-bold text-[#34423d]">
-                      {status.username || "Identity connected"}
-                    </p>
-                    <p className="mt-1 text-[11px] text-[#8a9591]">
-                      {status.lastSyncedAt
-                        ? `Last synced ${new Date(status.lastSyncedAt).toLocaleDateString()}`
-                        : "Ready to sync taste data"}
-                    </p>
-                  </div>
-                ) : (
-                  <form
-                    onSubmit={(e) => connect(provider, e)}
-                    className="mt-5 flex gap-2"
-                  >
-                    <input
-                      className="input"
-                      placeholder={`${info.name} username${provider === "LETTERBOXD" ? "" : " (optional)"}`}
-                      required={provider === "LETTERBOXD"}
-                      value={connecting === provider ? username : ""}
-                      onFocus={() => setConnecting(provider)}
-                      onChange={(e) => {
-                        setConnecting(provider);
-                        setUsername(e.target.value);
-                      }}
-                    />
-                    <button
-                      disabled={
-                        provider === "LETTERBOXD" && !username.trim()
-                      }
-                      className="btn-primary !px-4"
-                    >
-                      {connecting === provider ? "Connect" : "Connect"}{" "}
-                      <ExternalLink size={15} />
-                    </button>
-                  </form>
-                )}
-              </div>
-            );
-          },
-        )}
-      </div>
-      {connected("LETTERBOXD") && (
-        <section className="card mt-7 p-6 sm:p-7">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="eyebrow">Letterboxd favorites</p>
-              <h2 className="mt-2 font-[var(--font-display)] text-2xl font-extrabold">
-                Films you love
-              </h2>
-            </div>
-            {letterboxd?.profileUrl && (
-              <a
-                href={letterboxd.profileUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-secondary"
-              >
-                View profile <ExternalLink size={15} />
-              </a>
-            )}
-          </div>
-          {loadingFavorites ? (
-            <div className="mt-6 flex items-center gap-3 rounded-2xl bg-[#f4f6f3] p-6 text-sm font-bold text-[#71807b]">
-              <RefreshCw size={17} className="animate-spin" />
-              Loading favorite films...
-            </div>
-          ) : letterboxd?.favorites.length ? (
-            <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {letterboxd.favorites.map((favorite) => (
-                <a
-                  key={favorite.externalId}
-                  href={favorite.filmUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group overflow-hidden rounded-2xl bg-[#f4f6f3]"
-                >
-                  {favorite.posterUrl ? (
-                    <img
-                      src={favorite.posterUrl}
-                      alt={`Poster for ${favorite.title}`}
-                      className="aspect-[2/3] w-full object-cover transition group-hover:scale-[1.02]"
-                    />
-                  ) : (
-                    <span className="grid aspect-[2/3] place-items-center bg-[#e8ede9] text-[#71807b]">
-                      <Film size={32} />
-                    </span>
-                  )}
-                  <span className="block p-3">
-                    <span className="block text-sm font-extrabold text-[#34423d]">
-                      {favorite.title}
-                    </span>
-                    {favorite.year && (
-                      <span className="mt-1 block text-xs text-[#82908b]">
-                        {favorite.year}
-                      </span>
-                    )}
-                  </span>
-                </a>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-6 rounded-2xl bg-[#f4f6f3] p-6 text-sm text-[#71807b]">
-              No favorite films are stored for this Letterboxd profile yet.
-            </p>
-          )}
-        </section>
-      )}
-      <section className="card mt-7 p-6 sm:p-7">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <p className="eyebrow">Taste library</p>
-            <h2 className="mt-2 font-[var(--font-display)] text-2xl font-extrabold">
-              Teach the matcher what you love
-            </h2>
-          </div>
-          <select
-            className="input !w-auto"
-            value={selected}
-            onChange={(e) => {
-              setSelected(e.target.value as IntegrationProvider);
-              setItems([]);
-            }}
-          >
-            <option value="SPOTIFY">Spotify</option>
-            <option value="LETTERBOXD">Letterboxd</option>
-          </select>
+    <div className="pb-8">
+      <div className="relative overflow-hidden rounded-3xl bg-[#174f3f] px-6 py-8 text-white shadow-[0_16px_45px_rgba(23,79,63,.18)] sm:px-10 sm:py-10">
+        <div className="absolute -right-10 -top-16 text-[#f3c568]/20">
+          <Sparkles size={230} strokeWidth={1} />
         </div>
-        {!connected(selected) ? (
-          <div className="mt-6 rounded-2xl border border-dashed border-[#bfd1c9] bg-[#f6faf8] p-8 text-center">
-            <Sparkles className="mx-auto text-[#27775f]" />
-            <p className="mt-3 text-sm font-bold">
-              Connect {providerInfo[selected].name} first
-            </p>
-            <p className="mt-1 text-xs text-[#82908b]">
-              An integration identity is required before taste data can be
-              synced.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="mt-6 space-y-3">
-              {items.map((item, i) => (
-                <div
-                  key={item.externalId}
-                  className="grid gap-2 rounded-2xl bg-[#f4f6f3] p-3 sm:grid-cols-[120px_1fr_1fr_auto]"
-                >
-                  <select
-                    className="input"
-                    value={item.kind}
-                    onChange={(e) =>
-                      setItems(
-                        items.map((x, j) =>
-                          j === i ? { ...x, kind: e.target.value } : x,
-                        ),
-                      )
-                    }
-                  >
-                    {selected === "SPOTIFY" ? (
-                      <>
-                        <option value="artist">Artist</option>
-                        <option value="track">Track</option>
-                        <option value="genre">Genre</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="film">Film</option>
-                        <option value="genre">Genre</option>
-                        <option value="director">Director</option>
-                      </>
-                    )}
-                  </select>
-                  <input
-                    className="input"
-                    placeholder="Name"
-                    value={item.name}
-                    onChange={(e) =>
-                      setItems(
-                        items.map((x, j) =>
-                          j === i ? { ...x, name: e.target.value } : x,
-                        ),
-                      )
-                    }
-                  />
-                  <input
-                    className="input"
-                    placeholder="Genres, comma separated"
-                    value={item.genres.join(", ")}
-                    onChange={(e) =>
-                      setItems(
-                        items.map((x, j) =>
-                          j === i
-                            ? {
-                                ...x,
-                                genres: e.target.value
-                                  .split(",")
-                                  .map((v) => v.trim())
-                                  .filter(Boolean),
-                              }
-                            : x,
-                        ),
-                      )
-                    }
-                  />
-                  <button
-                    onClick={() => setItems(items.filter((_, j) => j !== i))}
-                    className="grid size-11 place-items-center rounded-xl text-[#c35e4a] hover:bg-[#ffebe6]"
-                    aria-label="Remove"
-                  >
-                    <Trash2 size={17} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="mt-5 flex flex-wrap justify-between gap-3">
-              <button onClick={addItem} className="btn-secondary">
-                <Plus size={16} /> Add taste item
-              </button>
-              <button
-                onClick={sync}
-                disabled={syncing || items.length === 0}
-                className="btn-primary"
-              >
-                <RefreshCw
-                  size={16}
-                  className={syncing ? "animate-spin" : ""}
-                />
-                {syncing
-                  ? "Syncing…"
-                  : `Sync ${items.length} item${items.length === 1 ? "" : "s"}`}
-              </button>
-            </div>
-          </>
-        )}
-      </section>
+        <div className="relative max-w-2xl">
+          <p className="text-xs font-extrabold uppercase tracking-[.2em] text-[#9ed5c2]">
+            Your taste, your signal
+          </p>
+          <h1 className="mt-3 font-[var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-5xl">
+            Make your profile sound like you.
+          </h1>
+          <p className="mt-4 max-w-xl leading-7 text-white/70">
+            Choose the music and movies you would happily bring into a new home.
+            Your picks help the right people find the overlap.
+          </p>
+        </div>
+      </div>
+      <div className="mt-6 grid gap-6 xl:grid-cols-2">
+        <TasteSection
+          title="Your soundtrack"
+          eyebrow="Music taste"
+          description="Genres and artists that belong on your side of the aux cord."
+          icon={Music2}
+          accent="bg-[#dff2e8]"
+          genres={genres}
+          genreIds={musicGenreIds}
+          onGenre={(id) =>
+            setTastes({
+              ...tastes,
+              musicGenres: toggle(musicGenreIds, id).map((value) => ({
+                musicGenre: genres.find((genre) => genre.id === value)!,
+              })),
+            })
+          }
+          search={artistSearch}
+          setSearch={setArtistSearch}
+          results={artists}
+          selected={favoriteArtists}
+          onItem={(item) =>
+            setTastes({
+              ...tastes,
+              favoriteArtists: toggleItem(
+                favoriteArtists,
+                item as ArtistSearchResult,
+              ).map((artist) => ({ artist })),
+            })
+          }
+          onSave={saveMusic}
+          saving={saving === "music"}
+          itemLabel="Artists and musicians"
+        />
+        <TasteSection
+          title="Your watchlist"
+          eyebrow="Movie taste"
+          description="The stories, worlds and directors you would always make time for."
+          icon={Film}
+          accent="bg-[#ffe8d7]"
+          genres={movieGenres}
+          genreIds={movieGenreIds}
+          onGenre={(id) =>
+            setTastes({
+              ...tastes,
+              movieGenres: toggle(movieGenreIds, id).map((value) => ({
+                movieGenre: movieGenres.find((genre) => genre.id === value)!,
+              })),
+            })
+          }
+          search={movieSearch}
+          setSearch={setMovieSearch}
+          results={movies}
+          selected={favoriteMovies}
+          onItem={(item) =>
+            setTastes({
+              ...tastes,
+              favoriteMovies: toggleItem(
+                favoriteMovies,
+                item as MovieSearchResult,
+              ).map((movie) => ({ movie })),
+            })
+          }
+          onSave={saveMovies}
+          saving={saving === "movies"}
+          itemLabel="Favorite movies"
+        />
+      </div>
     </div>
   );
 }
