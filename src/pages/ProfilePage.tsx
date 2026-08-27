@@ -1,14 +1,16 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Check, MapPin, Save, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowRight, Check, Film, Heart, MapPin, Music2, Save, ShieldCheck, UserRound } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Loading } from "../components/Loading";
 import { useAuth } from "../context/AuthContext";
 import { api, friendlyError } from "../lib/api";
-import type { Gender, ProfileInput, UserProfile } from "../types";
+import type { Gender, ProfileInput, UserProfile, UserTastes } from "../types";
 
 export function ProfilePage() {
   const { user, updateUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>();
+  const [tastes, setTastes] = useState<UserTastes | null>(null);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
     if (user)
@@ -19,7 +21,14 @@ export function ProfilePage() {
           toast.error(friendlyError(e));
           setProfile(null);
         });
-  }, [user?.id]);
+  }, [user]);
+  useEffect(() => {
+    if (user)
+      api
+        .getTastes(user.id)
+        .then(setTastes)
+        .catch(() => setTastes(null));
+  }, [user]);
   if (profile === undefined) return <Loading label="Loading your profile…" />;
   if (!profile) return <div className="card p-8">Profile unavailable.</div>;
   const h = profile.housingPreference,
@@ -100,9 +109,10 @@ export function ProfilePage() {
           displayed
         </span>
       </div>
+      <TasteShowcase tastes={tastes} />
       <form
         onSubmit={submit}
-        className="mt-8 grid gap-6 lg:grid-cols-[280px_1fr]"
+        className="mt-6 grid gap-6 lg:grid-cols-[280px_1fr]"
       >
         <aside className="space-y-5">
           <div className="card p-6 text-center">
@@ -327,6 +337,70 @@ export function ProfilePage() {
     </div>
   );
 }
+
+function TasteShowcase({ tastes }: { tastes: UserTastes | null }) {
+  const musicGenres = tastes?.musicGenres.map(({ musicGenre }) => musicGenre.name) ?? [];
+  const artists = tastes?.favoriteArtists.map(({ artist }) => artist.name) ?? [];
+  const movieGenres = tastes?.movieGenres.map(({ movieGenre }) => movieGenre.name) ?? [];
+  const movies = tastes?.favoriteMovies.map(({ movie }) => movie.title) ?? [];
+  const music = [...artists, ...musicGenres];
+  const film = [...movies, ...movieGenres];
+  const hasTastes = music.length + film.length > 0;
+
+  return (
+    <section className="mt-8 overflow-hidden rounded-[28px] border border-black/6 bg-[#174f3f] text-white shadow-[0_14px_45px_rgba(23,79,63,.14)]">
+      <div className="grid lg:grid-cols-[250px_1fr]">
+        <div className="relative overflow-hidden border-b border-white/10 p-6 sm:p-7 lg:border-b-0 lg:border-r">
+          <Heart className="absolute -bottom-9 -right-7 text-[#f3c568]/15" size={130} strokeWidth={1} />
+          <div className="relative">
+            <p className="text-[10px] font-black uppercase tracking-[.2em] text-[#a7ddca]">On your profile</p>
+            <h2 className="mt-2 font-[var(--font-display)] text-2xl font-extrabold">Things I love</h2>
+            <p className="mt-2 text-xs leading-5 text-white/60">A quick glimpse of the soundtrack and stories you would bring home.</p>
+            <Link to="/app/integrations" className="mt-5 inline-flex items-center gap-2 text-xs font-extrabold text-[#f3c568] hover:gap-3">
+              {hasTastes ? "Edit my tastes" : "Add my favorites"}<ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
+        {hasTastes ? (
+          <div className="grid sm:grid-cols-2">
+            <TasteList icon={Music2} title="On repeat" items={music} className="border-b border-white/10 sm:border-b-0 sm:border-r" />
+            <TasteList icon={Film} title="Movie night picks" items={film} />
+          </div>
+        ) : (
+          <div className="flex min-h-44 items-center p-6 sm:p-8">
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/10 text-[#f3c568]"><Heart size={19} /></span>
+            <div className="ml-4">
+              <p className="text-sm font-extrabold">Make your profile more personal</p>
+              <p className="mt-1 text-xs leading-5 text-white/55">Add favorite genres, artists, and films to give matches an easy conversation starter.</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function TasteList({ icon: Icon, title, items, className = "" }: { icon: typeof Music2; title: string; items: string[]; className?: string }) {
+  return (
+    <div className={`p-6 sm:p-7 ${className}`}>
+      <div className="flex items-center gap-2.5">
+        <span className="grid size-8 place-items-center rounded-xl bg-white/10 text-[#a7ddca]"><Icon size={15} /></span>
+        <p className="text-xs font-extrabold uppercase tracking-[.12em] text-white/65">{title}</p>
+      </div>
+      {items.length ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {items.slice(0, 6).map((item, index) => (
+            <span key={`${item}-${index}`} className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-bold text-white/85">{item}</span>
+          ))}
+          {items.length > 6 && <span className="rounded-full px-2 py-1.5 text-xs font-bold text-[#f3c568]">+{items.length - 6} more</span>}
+        </div>
+      ) : (
+        <p className="mt-4 text-xs text-white/45">Nothing selected yet.</p>
+      )}
+    </div>
+  );
+}
+
 function Field({
   label,
   children,
