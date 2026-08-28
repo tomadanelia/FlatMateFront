@@ -1,6 +1,7 @@
 import type {
   AlgorithmConfig,
   AlgorithmKey,
+  AvatarUpdate,
   AuthResponse,
   ArtistSearchResult,
   MatchSearchResponse,
@@ -87,6 +88,11 @@ export const api = {
     request<UserProfile>("/api/users/profile", {
       method: "PUT",
       body: JSON.stringify(input),
+    }),
+  updateAvatar: (avatarUrl: string | null) =>
+    request<AvatarUpdate>("/api/users/me/avatar", {
+      method: "PATCH",
+      body: JSON.stringify({ avatarUrl }),
     }),
   getTests: () => request<TestSummary[]>("/api/tests"),
   getTest: (slug: string) =>

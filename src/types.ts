@@ -96,6 +96,11 @@ export interface UserProfile extends SessionUser {
   integrations?: IntegrationSummary[];
 }
 
+export interface AvatarUpdate {
+  id: string;
+  avatarUrl: string | null;
+}
+
 export interface ProfileInput {
   id: string;
   email: string;

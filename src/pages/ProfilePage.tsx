@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowRight, Check, Film, Heart, MapPin, Music2, Save, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowRight, Check, Film, Heart, ImagePlus, MapPin, Music2, Save, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Loading } from "../components/Loading";
@@ -12,6 +12,9 @@ export function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>();
   const [tastes, setTastes] = useState<UserTastes | null>(null);
   const [loading, setLoading] = useState(false);
+  const [avatarInput, setAvatarInput] = useState("");
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
   useEffect(() => {
     if (user)
       api
@@ -22,6 +25,10 @@ export function ProfilePage() {
           setProfile(null);
         });
   }, [user]);
+  useEffect(() => {
+    setAvatarInput(profile?.avatarUrl ?? "");
+    setAvatarFailed(false);
+  }, [profile?.avatarUrl]);
   useEffect(() => {
     if (user)
       api
@@ -86,6 +93,37 @@ export function ProfilePage() {
       setLoading(false);
     }
   }
+  async function saveAvatar(avatarUrl: string | null) {
+    const nextUrl = avatarUrl?.trim() || null;
+    if (nextUrl) {
+      if (nextUrl.length > 2048) {
+        toast.error("Photo URL must be 2,048 characters or fewer.");
+        return;
+      }
+      try {
+        const parsed = new URL(nextUrl);
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:")
+          throw new Error();
+      } catch {
+        toast.error("Enter an absolute HTTP or HTTPS URL.");
+        return;
+      }
+    }
+
+    setAvatarLoading(true);
+    try {
+      const updated = await api.updateAvatar(nextUrl);
+      setProfile((current) =>
+        current ? { ...current, avatarUrl: updated.avatarUrl } : current,
+      );
+      setAvatarInput(updated.avatarUrl ?? "");
+      toast.success(updated.avatarUrl ? "Profile picture updated" : "Profile picture removed");
+    } catch (err) {
+      toast.error(friendlyError(err));
+    } finally {
+      setAvatarLoading(false);
+    }
+  }
   const initials = (profile.displayName || profile.email)
     .split(" ")
     .map((x) => x[0])
@@ -116,14 +154,65 @@ export function ProfilePage() {
       >
         <aside className="space-y-5">
           <div className="card p-6 text-center">
-            <span className="mx-auto grid size-24 place-items-center rounded-3xl bg-[#e6bd69] font-[var(--font-display)] text-3xl font-black text-[#473719]">
-              {initials}
-            </span>
+            {profile.avatarUrl && !avatarFailed ? (
+              <img
+                src={profile.avatarUrl}
+                alt={`${profile.displayName || "User"}'s profile`}
+                className="mx-auto size-24 rounded-3xl object-cover"
+                onError={() => setAvatarFailed(true)}
+              />
+            ) : (
+              <span className="mx-auto grid size-24 place-items-center rounded-3xl bg-[#e6bd69] font-[var(--font-display)] text-3xl font-black text-[#473719]">
+                {initials}
+              </span>
+            )}
             <h2 className="mt-4 text-lg font-black">{profile.displayName}</h2>
             <p className="mt-1 text-xs text-[#82908b]">{profile.email}</p>
             <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#e7f3ee] px-3 py-1.5 text-[10px] font-extrabold uppercase text-[#27775f]">
               <Check size={12} /> Profile complete
             </span>
+            <div className="mt-5 border-t border-black/6 pt-5 text-left">
+              <label htmlFor="avatarUrl" className="label">
+                Profile picture URL
+              </label>
+              <input
+                id="avatarUrl"
+                type="url"
+                inputMode="url"
+                className="input"
+                placeholder="https://images.example.com/profile.jpg"
+                value={avatarInput}
+                maxLength={2048}
+                disabled={avatarLoading}
+                onChange={(event) => setAvatarInput(event.target.value)}
+              />
+              <p className="mt-2 text-[11px] leading-4 text-[#82908b]">
+                Paste an absolute HTTP or HTTPS image URL.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  className="btn-primary min-w-0 flex-1 justify-center px-3"
+                  disabled={avatarLoading || !avatarInput.trim()}
+                  onClick={() => saveAvatar(avatarInput)}
+                >
+                  <ImagePlus size={15} />
+                  {avatarLoading ? "Saving…" : "Update"}
+                </button>
+                {profile.avatarUrl && (
+                  <button
+                    type="button"
+                    className="grid size-10 shrink-0 place-items-center rounded-xl border border-[#e7d4cd] text-[#b4533d] transition hover:bg-[#fff1e9] disabled:opacity-50"
+                    aria-label="Remove profile picture"
+                    title="Remove profile picture"
+                    disabled={avatarLoading}
+                    onClick={() => saveAvatar(null)}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
           <div className="card p-5">
             <p className="text-xs font-extrabold uppercase tracking-wider text-[#89938f]">
