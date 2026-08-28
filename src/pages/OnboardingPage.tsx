@@ -14,6 +14,10 @@ import { toast } from "sonner";
 import { Brand } from "../components/Brand";
 import { useAuth } from "../context/AuthContext";
 import { api, friendlyError } from "../lib/api";
+import {
+  citiesForCountry,
+  countrySuggestions,
+} from "../data/locationSuggestions";
 import type { Gender, ProfileInput } from "../types";
 
 const stepMeta = [
@@ -277,11 +281,17 @@ export function OnboardingPage() {
                       className="input"
                       required
                       placeholder="e.g. Tbilisi"
+                      list="onboarding-city-suggestions"
                       value={form.city}
                       onChange={(e) =>
                         setForm({ ...form, city: e.target.value })
                       }
                     />
+                    <datalist id="onboarding-city-suggestions">
+                      {citiesForCountry(form.countryCode).map((city) => (
+                        <option key={city} value={city} />
+                      ))}
+                    </datalist>
                   </div>
                   <div>
                     <label className="label">Country code</label>
@@ -291,11 +301,21 @@ export function OnboardingPage() {
                       minLength={2}
                       maxLength={2}
                       placeholder="GE"
+                      list="onboarding-country-suggestions"
                       value={form.countryCode}
                       onChange={(e) =>
                         setForm({ ...form, countryCode: e.target.value })
                       }
                     />
+                    <datalist id="onboarding-country-suggestions">
+                      {countrySuggestions.map((country) => (
+                        <option
+                          key={country.code}
+                          value={country.code}
+                          label={country.name}
+                        />
+                      ))}
+                    </datalist>
                   </div>
                 </div>
                 <div className="rounded-2xl border border-black/6 bg-white p-5">

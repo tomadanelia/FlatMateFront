@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Loading } from "../components/Loading";
 import { useAuth } from "../context/AuthContext";
 import { api, friendlyError } from "../lib/api";
+import { citiesForCountry, countrySuggestions } from "../data/locationSuggestions";
 import type { Gender, ProfileInput, UserProfile, UserTastes } from "../types";
 
 export function ProfilePage() {
@@ -15,6 +16,7 @@ export function ProfilePage() {
   const [avatarInput, setAvatarInput] = useState("");
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [avatarFailed, setAvatarFailed] = useState(false);
+  const [countryCode, setCountryCode] = useState("");
   useEffect(() => {
     if (user)
       api
@@ -29,6 +31,9 @@ export function ProfilePage() {
     setAvatarInput(profile?.avatarUrl ?? "");
     setAvatarFailed(false);
   }, [profile?.avatarUrl]);
+  useEffect(() => {
+    setCountryCode(profile?.housingPreference?.countryCode ?? "");
+  }, [profile?.housingPreference?.countryCode]);
   useEffect(() => {
     if (user)
       api
@@ -308,8 +313,14 @@ export function ProfilePage() {
                   name="city"
                   className="input"
                   required
+                  list="profile-city-suggestions"
                   defaultValue={h.city}
                 />
+                <datalist id="profile-city-suggestions">
+                  {citiesForCountry(countryCode).map((city) => (
+                    <option key={city} value={city} />
+                  ))}
+                </datalist>
               </Field>
               <Field label="Country code">
                 <input
@@ -318,8 +329,19 @@ export function ProfilePage() {
                   required
                   minLength={2}
                   maxLength={2}
+                  list="profile-country-suggestions"
                   defaultValue={h.countryCode}
+                  onChange={(event) => setCountryCode(event.target.value)}
                 />
+                <datalist id="profile-country-suggestions">
+                  {countrySuggestions.map((country) => (
+                    <option
+                      key={country.code}
+                      value={country.code}
+                      label={country.name}
+                    />
+                  ))}
+                </datalist>
               </Field>
               <Field label="Currency">
                 <input
