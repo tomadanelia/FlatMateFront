@@ -25,7 +25,7 @@ function otherParticipant(conversation: Conversation, userId: string) {
 }
 
 function initials(person: MessageParticipant) {
-  return (person.displayName || "Havenly member")
+  return (person.displayName || "FlatMate member")
     .split(/\s+/)
     .map((part) => part[0])
     .join("")
@@ -72,7 +72,7 @@ function ConversationRow({ conversation, active, userId, onClick }: {
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-extrabold">{person.displayName || "Havenly member"}</span>
+          <span className="truncate text-sm font-extrabold">{person.displayName || "FlatMate member"}</span>
           {conversation.lastMessageAt && <time className="ml-auto shrink-0 text-[10px] font-semibold text-[#93a09b]">{timeLabel(conversation.lastMessageAt)}</time>}
         </div>
         <div className="mt-0.5 flex items-center gap-2">
@@ -117,7 +117,7 @@ export function MessagesPage() {
     if (!user) return [];
     const query = search.trim().toLowerCase();
     return conversations.filter((conversation) =>
-      (otherParticipant(conversation, user.id).displayName || "Havenly member")
+      (otherParticipant(conversation, user.id).displayName || "FlatMate member")
         .toLowerCase()
         .includes(query),
     );
@@ -232,7 +232,7 @@ export function MessagesPage() {
                 <button onClick={() => navigate("/app/messages")} className="grid size-9 place-items-center rounded-xl hover:bg-[#f1f3ef] md:hidden" aria-label="Back to conversations"><ArrowLeft size={19} /></button>
                 <Avatar person={person} />
                 <div className="min-w-0">
-                  <h2 className="truncate font-[var(--font-display)] text-base font-black">{person.displayName || "Havenly member"}</h2>
+                  <h2 className="truncate font-[var(--font-display)] text-base font-black">{person.displayName || "FlatMate member"}</h2>
                   <p className="flex items-center gap-1.5 text-[11px] font-semibold text-[#7c8b85]"><span className={`size-1.5 rounded-full ${connected ? "bg-[#45a880]" : "bg-[#d7a03f]"}`} />{connected ? "Messages update live" : "Reconnecting…"}</p>
                 </div>
               </header>

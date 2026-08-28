@@ -51,7 +51,7 @@ export function AuthPage() {
         ? await api.signup(form)
         : await api.login({ email: form.email, password: form.password });
       setSession(result);
-      toast.success(signup ? "Welcome to Havenly!" : "Welcome back!");
+      toast.success(signup ? "Welcome to FlatMate!" : "Welcome back!");
       navigate(
         signup
           ? "/onboarding"

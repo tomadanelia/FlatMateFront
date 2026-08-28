@@ -14,7 +14,7 @@ function participant(conversation: Conversation, userId: string) {
 }
 
 function Avatar({ person }: { person: MessageParticipant }) {
-  const label = (person.displayName || "Havenly member")
+  const label = (person.displayName || "FlatMate member")
     .split(/\s+/)
     .map((word) => word[0])
     .join("")
@@ -138,7 +138,7 @@ export function ChatDock() {
             <button key={conversation.id} onClick={() => { setOpen(false); navigate(`/app/messages/${conversation.id}`); }} className="flex w-full items-center gap-3 rounded-2xl p-3 text-left hover:bg-[#f2f6f3]">
               <Avatar person={person} />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-extrabold">{person.displayName || "Havenly member"}</p>
+                <p className="truncate text-sm font-extrabold">{person.displayName || "FlatMate member"}</p>
                 <p className={`mt-0.5 truncate text-xs ${unread ? "font-bold text-[#4c5a55]" : "text-[#89958f]"}`}>{message?.body || "Start the conversation"}</p>
               </div>
               {unread > 0 && <span className="grid min-w-5 place-items-center rounded-full bg-[#f18b6d] px-1.5 py-0.5 text-[10px] font-black text-white">{unread}</span>}

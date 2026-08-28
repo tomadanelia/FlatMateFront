@@ -172,7 +172,7 @@ export function AppShell() {
         <span className="flex items-center gap-1.5">
           <HeartHandshake size={15} /> Better roommates, happier homes.
         </span>
-        <span>© {new Date().getFullYear()} Havenly</span>
+        <span>© {new Date().getFullYear()} FlatMate</span>
       </footer>
       <ChatDock />
     </div>

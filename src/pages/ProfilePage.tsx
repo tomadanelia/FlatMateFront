@@ -96,7 +96,7 @@ export function ProfilePage() {
     <div>
       <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
-          <p className="eyebrow">Your corner of Havenly</p>
+          <p className="eyebrow">Your corner of FlatMate</p>
           <h1 className="mt-2 font-[var(--font-display)] text-4xl font-extrabold tracking-tight">
             Profile & preferences
           </h1>
