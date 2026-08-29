@@ -17,8 +17,27 @@ import {
 } from "react-router-dom";
 import { toast } from "sonner";
 import { Brand } from "../components/Brand";
-import { api, friendlyError } from "../lib/api";
+import { VerificationCodeModal } from "../components/VerificationCodeModal";
+import { ApiError, api, friendlyError } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+
+const PENDING_VERIFICATION_KEY = "flatmate_pending_verification";
+
+type PendingVerification = {
+  email: string;
+  destination: string;
+  resendAvailableAt: number;
+};
+
+function loadPendingVerification(): PendingVerification | null {
+  try {
+    return JSON.parse(
+      sessionStorage.getItem(PENDING_VERIFICATION_KEY) || "null",
+    );
+  } catch {
+    return null;
+  }
+}
 
 export function AuthPage() {
   const { user, setSession } = useAuth();
@@ -28,6 +47,8 @@ export function AuthPage() {
   const [signup, setSignup] = useState(params.get("mode") === "signup");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pendingVerification, setPendingVerificationState] =
+    useState<PendingVerification | null>(loadPendingVerification);
   const [form, setForm] = useState({
     displayName: "",
     email: "",
@@ -43,22 +64,58 @@ export function AuthPage() {
     /[A-Z]/.test(form.password) &&
     /\d/.test(form.password) &&
     form.password.length >= 8;
+
+  function setPendingVerification(next: PendingVerification | null) {
+    if (next) {
+      sessionStorage.setItem(PENDING_VERIFICATION_KEY, JSON.stringify(next));
+    } else {
+      sessionStorage.removeItem(PENDING_VERIFICATION_KEY);
+    }
+    setPendingVerificationState(next);
+  }
+
+  function openVerification(email: string, destination: string) {
+    setPendingVerification({
+      email: email.trim().toLowerCase(),
+      destination,
+      resendAvailableAt: Date.now() + 60_000,
+    });
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
-      const result = signup
-        ? await api.signup(form)
-        : await api.login({ email: form.email, password: form.password });
-      setSession(result);
-      toast.success(signup ? "Welcome to FlatMate!" : "Welcome back!");
-      navigate(
-        signup
-          ? "/onboarding"
-          : (location.state as { from?: string })?.from || "/app/discover",
-      );
+      if (signup) {
+        await api.signup(form);
+        openVerification(form.email, "/onboarding");
+        toast.success("Account created. Check your email for the code.");
+      } else {
+        const result = await api.login({
+          email: form.email,
+          password: form.password,
+        });
+        setSession(result);
+        toast.success("Welcome back!");
+        navigate(
+          (location.state as { from?: string })?.from || "/app/discover",
+        );
+      }
     } catch (err) {
-      toast.error(friendlyError(err));
+      if (
+        !signup &&
+        err instanceof ApiError &&
+        err.status === 403 &&
+        err.message.toLowerCase().includes("email verification is required")
+      ) {
+        openVerification(
+          form.email,
+          (location.state as { from?: string })?.from || "/app/discover",
+        );
+        toast.info("Verify your email to continue.");
+      } else {
+        toast.error(friendlyError(err));
+      }
     } finally {
       setLoading(false);
     }
@@ -225,6 +282,29 @@ export function AuthPage() {
           </form>
         </div>
       </div>
+      {pendingVerification && (
+        <VerificationCodeModal
+          email={pendingVerification.email}
+          initialResendAvailableAt={pendingVerification.resendAvailableAt}
+          onResendAvailableAtChange={(resendAvailableAt) =>
+            setPendingVerification({
+              ...pendingVerification,
+              resendAvailableAt,
+            })
+          }
+          onVerified={(session) => {
+            const destination = pendingVerification.destination;
+            setSession(session);
+            setPendingVerification(null);
+            toast.success("Email verified. Welcome to FlatMate!");
+            navigate(destination);
+          }}
+          onUseDifferentEmail={() => {
+            setPendingVerification(null);
+            setForm((current) => ({ ...current, email: "", password: "" }));
+          }}
+        />
+      )}
     </div>
   );
 }

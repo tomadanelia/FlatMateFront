@@ -9,8 +9,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
-import { Brand } from "../components/Brand";
 import { useAuth } from "../context/AuthContext";
+import logoUrl from "../logo/logo.svg";
 
 export function LandingPage() {
   const { user } = useAuth();
@@ -18,7 +18,13 @@ export function LandingPage() {
   return (
     <div className="min-h-screen overflow-hidden bg-[#f7f6f0]">
       <header className="relative z-20 mx-auto flex h-20 max-w-7xl items-center px-5 sm:px-8">
-        <Brand />
+        <Link to="/" aria-label="Flatmate home" className="shrink-0">
+          <img
+            src={logoUrl}
+            alt="Flatmate"
+            className="size-[72px] rounded-xl object-contain"
+          />
+        </Link>
         <nav className="ml-auto hidden items-center gap-8 text-sm font-bold text-[#53605c] md:flex">
           <a href="#how">How it works</a>
           <a href="#why">Why Flatmate</a>
@@ -235,7 +241,13 @@ export function LandingPage() {
       </main>
       <footer className="bg-[#102f27] px-5 py-8 text-white/55">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
-          <Brand light />
+          <Link to="/" aria-label="Flatmate home">
+            <img
+              src={logoUrl}
+              alt="Flatmate"
+              className="size-16 rounded-xl object-contain"
+            />
+          </Link>
           <p className="text-xs">
             © {new Date().getFullYear()} Flatmate. Better living starts with
             better company.

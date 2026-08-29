@@ -73,9 +73,19 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   signup: (input: { email: string; password: string; displayName: string }) =>
-    request<AuthResponse>("/api/auth/signup", {
+    request<unknown>("/api/auth/signup", {
       method: "POST",
       body: JSON.stringify(input),
+    }),
+  verifyEmail: (input: { email: string; code: string }) =>
+    request<AuthResponse>("/api/auth/verify-email", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  resendVerification: (email: string) =>
+    request<unknown>("/api/auth/resend-verification", {
+      method: "POST",
+      body: JSON.stringify({ email }),
     }),
   login: (input: { email: string; password: string }) =>
     request<AuthResponse>("/api/auth/login", {
