@@ -247,7 +247,22 @@ function MatchCard({
     .join("")
     .slice(0, 2);
   return (
-    <article className="card group overflow-hidden">
+    <article
+      className="card group cursor-pointer overflow-hidden outline-none transition hover:-translate-y-1 hover:shadow-[0_18px_50px_rgba(37,53,47,.11)] focus-visible:ring-3 focus-visible:ring-[#27775f]/25"
+      role="link"
+      tabIndex={0}
+      aria-label={`View ${match.user.displayName || "match"}'s profile`}
+      onClick={(event) => {
+        if ((event.target as HTMLElement).closest("button, a")) return;
+        navigate(`/app/users/${match.user.id}`);
+      }}
+      onKeyDown={(event) => {
+        if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          navigate(`/app/users/${match.user.id}`);
+        }
+      }}
+    >
       <div className={`relative h-56 ${color}`}>
         <div className="absolute inset-0 soft-grid opacity-20" />
         {match.user.avatarUrl ? (
@@ -328,6 +343,9 @@ function MatchCard({
           {openingChat ? <LoaderCircle size={16} className="animate-spin" /> : <MessageCircle size={16} />}
           {openingChat ? "Opening conversation…" : `Message ${match.user.displayName?.split(" ")[0] || "match"}`}
         </button>
+        <p className="mt-3 flex items-center justify-center gap-1 text-xs font-bold text-[#27775f]">
+          View full profile <ArrowRight size={13} className="transition group-hover:translate-x-0.5" />
+        </p>
       </div>
     </article>
   );

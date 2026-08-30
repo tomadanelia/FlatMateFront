@@ -154,6 +154,43 @@ export interface UserTastes {
   favoriteMovies: { movie: MovieSearchResult }[];
 }
 
+export interface PublicPersonalityTrait {
+  trait: string;
+  score: number;
+}
+
+export interface PublicUserProfile {
+  id: string;
+  displayName: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  birthDate?: string | null;
+  age?: number | null;
+  gender?: Gender | null;
+  housingPreference: HousingPreference | null;
+  lifestyleProfile: LifestyleProfile | null;
+  tastes?: UserTastes | null;
+  personality?:
+    | PublicPersonalityTrait[]
+    | { traits?: PublicPersonalityTrait[]; traitScores?: PublicPersonalityTrait[] }
+    | null;
+  personalityTraits?: PublicPersonalityTrait[];
+  traitScores?: PublicPersonalityTrait[];
+}
+
+export interface BlockedUser {
+  id: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  bio?: string | null;
+}
+
+export type BlockedUserRecord =
+  | BlockedUser
+  | { blocked: BlockedUser }
+  | { blockedUser: BlockedUser }
+  | { user: BlockedUser };
+
 export interface TestSummary {
   id: string;
   slug: string;

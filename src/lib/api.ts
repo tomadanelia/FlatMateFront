@@ -21,6 +21,8 @@ import type {
   ChatMessage,
   Conversation,
   MessageHistory,
+  BlockedUserRecord,
+  PublicUserProfile,
 } from "../types";
 
 const configuredBase = (
@@ -94,6 +96,20 @@ export const api = {
     }),
   getUser: (id: string) =>
     request<UserProfile | null>(`/api/users/${encodeURIComponent(id)}`),
+  getPublicProfile: (id: string) =>
+    request<PublicUserProfile | null>(`/api/users/${encodeURIComponent(id)}`),
+  getBlockedUsers: () =>
+    request<BlockedUserRecord[] | { items: BlockedUserRecord[] }>(
+      "/api/users/me/blocks",
+    ),
+  blockUser: (id: string) =>
+    request<unknown>(`/api/users/${encodeURIComponent(id)}/block`, {
+      method: "POST",
+    }),
+  unblockUser: (id: string) =>
+    request<unknown>(`/api/users/${encodeURIComponent(id)}/block`, {
+      method: "DELETE",
+    }),
   saveProfile: (input: ProfileInput) =>
     request<UserProfile>("/api/users/profile", {
       method: "PUT",
