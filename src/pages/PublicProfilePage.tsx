@@ -29,8 +29,8 @@ import { useMessaging } from "../context/MessagingContext";
 import { api, friendlyError } from "../lib/api";
 import type {
   PublicPersonalityTrait,
+  PublicUserTastes,
   PublicUserProfile,
-  UserTastes,
 } from "../types";
 
 const lifestyleItems = [
@@ -264,9 +264,15 @@ function TraitBar({ trait }: { trait: PublicPersonalityTrait }) {
   return <div><div className="mb-2 flex justify-between text-xs"><span className="font-bold">{formatLabel(trait.trait)}</span><span className="font-black text-[#27775f]">{Math.round(percent)}%</span></div><div className="h-2 overflow-hidden rounded-full bg-[#edf0eb]"><div className="h-full rounded-full bg-[#e0b15e]" style={{ width: `${percent}%` }} /></div></div>;
 }
 
-function TasteSection({ tastes }: { tastes?: UserTastes | null }) {
-  const music = [...(tastes?.favoriteArtists?.map(({ artist }) => artist.name) ?? []), ...(tastes?.musicGenres?.map(({ musicGenre }) => musicGenre.name) ?? [])];
-  const films = [...(tastes?.favoriteMovies?.map(({ movie }) => movie.title) ?? []), ...(tastes?.movieGenres?.map(({ movieGenre }) => movieGenre.name) ?? [])];
+function TasteSection({ tastes }: { tastes?: PublicUserTastes | null }) {
+  const music = [
+    ...(tastes?.favoriteArtists?.map((artist) => artist.name) ?? []),
+    ...(tastes?.musicGenres?.map((genre) => genre.name) ?? []),
+  ];
+  const films = [
+    ...(tastes?.favoriteMovies?.map((movie) => movie.title) ?? []),
+    ...(tastes?.movieGenres?.map((genre) => genre.name) ?? []),
+  ];
   return <ProfileSection icon={Music2} title="Tastes" subtitle="Easy conversation starters">{music.length || films.length ? <div className="space-y-5">{music.length > 0 && <TasteGroup icon={Music2} label="Music" items={music} />}{films.length > 0 && <TasteGroup icon={Film} label="Films" items={films} />}</div> : <MutedCopy text="No favorite music or films have been shared yet." />}</ProfileSection>;
 }
 

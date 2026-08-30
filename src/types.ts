@@ -154,6 +154,21 @@ export interface UserTastes {
   favoriteMovies: { movie: MovieSearchResult }[];
 }
 
+export interface PublicUserTastes {
+  musicGenres: MusicGenre[];
+  favoriteArtists: Pick<ArtistSearchResult, "id" | "name">[];
+  movieGenres: MovieGenre[];
+  favoriteMovies: Pick<MovieSearchResult, "id" | "title">[];
+  importedItems?: {
+    provider: string;
+    kind: string;
+    name: string;
+    artists: string[];
+    genres: string[];
+    score: number;
+  }[];
+}
+
 export interface PublicPersonalityTrait {
   trait: string;
   score: number;
@@ -169,7 +184,7 @@ export interface PublicUserProfile {
   gender?: Gender | null;
   housingPreference: HousingPreference | null;
   lifestyleProfile: LifestyleProfile | null;
-  tastes?: UserTastes | null;
+  tastes?: PublicUserTastes | null;
   personality?:
     | PublicPersonalityTrait[]
     | { traits?: PublicPersonalityTrait[]; traitScores?: PublicPersonalityTrait[] }
