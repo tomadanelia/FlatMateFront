@@ -75,7 +75,7 @@ export function OnboardingPage() {
   useEffect(() => {
     if (user)
       api
-        .getUser(user.id)
+        .getUser()
         .then((profile) => {
           if (profile?.onboardingComplete)
             navigate("/app/discover", { replace: true });

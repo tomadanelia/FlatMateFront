@@ -94,8 +94,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify(input),
     }),
-  getUser: (id: string) =>
-    request<UserProfile | null>(`/api/users/${encodeURIComponent(id)}`),
+  getUser: () => request<UserProfile>("/api/users/me"),
   getPublicProfile: (id: string) =>
     request<PublicUserProfile | null>(`/api/users/${encodeURIComponent(id)}`),
   getBlockedUsers: () =>

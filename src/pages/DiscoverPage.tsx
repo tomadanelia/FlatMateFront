@@ -49,7 +49,7 @@ export function DiscoverPage() {
   useEffect(() => {
     if (!user) return;
     api
-      .getUser(user.id)
+      .getUser()
       .then((p) => {
         setProfile(p);
         if (!p?.onboardingComplete) {
@@ -257,7 +257,10 @@ function MatchCard({
         navigate(`/app/users/${match.user.id}`);
       }}
       onKeyDown={(event) => {
-        if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
+        if (
+          event.target === event.currentTarget &&
+          (event.key === "Enter" || event.key === " ")
+        ) {
           event.preventDefault();
           navigate(`/app/users/${match.user.id}`);
         }
@@ -340,11 +343,21 @@ function MatchCard({
           disabled={openingChat}
           className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#174f3f] py-3 text-sm font-bold text-white group-hover:bg-[#103e31]"
         >
-          {openingChat ? <LoaderCircle size={16} className="animate-spin" /> : <MessageCircle size={16} />}
-          {openingChat ? "Opening conversation…" : `Message ${match.user.displayName?.split(" ")[0] || "match"}`}
+          {openingChat ? (
+            <LoaderCircle size={16} className="animate-spin" />
+          ) : (
+            <MessageCircle size={16} />
+          )}
+          {openingChat
+            ? "Opening conversation…"
+            : `Message ${match.user.displayName?.split(" ")[0] || "match"}`}
         </button>
         <p className="mt-3 flex items-center justify-center gap-1 text-xs font-bold text-[#27775f]">
-          View full profile <ArrowRight size={13} className="transition group-hover:translate-x-0.5" />
+          View full profile{" "}
+          <ArrowRight
+            size={13}
+            className="transition group-hover:translate-x-0.5"
+          />
         </p>
       </div>
     </article>
