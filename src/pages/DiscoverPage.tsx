@@ -69,7 +69,7 @@ export function DiscoverPage() {
     try {
       const result = await api.searchMatches({
         userId: user.id,
-        limit: 24,
+        limit: 20,
         ...(selected.length && { algorithms: selected }),
       });
       setMatches(result.matches);
