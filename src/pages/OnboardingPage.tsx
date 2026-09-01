@@ -14,9 +14,13 @@ import {
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Brand } from "../components/Brand";
-import { ModernDatePicker, ModernSelect } from "../components/ModernFormControls";
+import {
+  ModernDatePicker,
+  ModernSelect,
+} from "../components/ModernFormControls";
 import { useAuth } from "../context/AuthContext";
 import { api, friendlyError } from "../lib/api";
+import { isAtLeastAge } from "../lib/date";
 import {
   citiesForCountry,
   countrySuggestions,
@@ -87,6 +91,8 @@ export function OnboardingPage() {
   if (!user) return null;
   function next(e: FormEvent) {
     e.preventDefault();
+    if (step === 0 && form.birthDate && !isAtLeastAge(form.birthDate, 18))
+      return;
     if (step < 2) setStep(step + 1);
     else finish();
   }
@@ -216,6 +222,7 @@ export function OnboardingPage() {
                     </label>
                     <ModernDatePicker
                         value={form.birthDate}
+                        minimumAge={18}
                         onChange={(birthDate) =>
                           setForm({ ...form, birthDate })
                         }

@@ -13,6 +13,7 @@ import {
   useState,
   type SelectHTMLAttributes,
 } from "react";
+import { isAtLeastAge } from "../lib/date";
 
 type Option = { value: string; label: string };
 
@@ -90,6 +91,7 @@ type DatePickerProps = {
   onChange?: (value: string) => void;
   nativeClassName?: string;
   nativeWithIcon?: boolean;
+  minimumAge?: number;
 };
 
 export function ModernDatePicker({
@@ -99,11 +101,16 @@ export function ModernDatePicker({
   onChange,
   nativeClassName = "input picker-input pr-12 font-semibold",
   nativeWithIcon = true,
+  minimumAge,
 }: DatePickerProps) {
   const desktop = useDesktop();
   const controlled = value !== undefined;
   const [internalValue, setInternalValue] = useState(defaultValue);
   const currentValue = controlled ? value : internalValue;
+  const ageError = Boolean(
+    currentValue && minimumAge && !isAtLeastAge(currentValue, minimumAge),
+  );
+  const errorId = useId();
 
   if (!desktop) {
     const input = (
@@ -113,6 +120,8 @@ export function ModernDatePicker({
         type="date"
         value={controlled ? value : undefined}
         defaultValue={controlled ? undefined : defaultValue}
+        aria-invalid={ageError}
+        aria-describedby={ageError ? errorId : undefined}
         onClick={(event) => event.currentTarget.showPicker?.()}
         onChange={(event) => {
           if (!controlled) setInternalValue(event.target.value);
@@ -120,38 +129,64 @@ export function ModernDatePicker({
         }}
       />
     );
-    if (!nativeWithIcon) return input;
+    if (!nativeWithIcon)
+      return (
+        <>
+          {input}
+          {ageError && <AgeError id={errorId} minimumAge={minimumAge!} />}
+        </>
+      );
     return (
-      <div className="group relative">
-        {input}
-        <CalendarDays
-          aria-hidden="true"
-          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#648079] transition-colors group-focus-within:text-[#27775f]"
-          size={18}
-        />
-      </div>
+      <>
+        <div className="group relative">
+          {input}
+          <CalendarDays
+            aria-hidden="true"
+            className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#648079] transition-colors group-focus-within:text-[#27775f]"
+            size={18}
+          />
+        </div>
+        {ageError && <AgeError id={errorId} minimumAge={minimumAge!} />}
+      </>
     );
   }
 
   return (
-    <DesktopDatePicker
-      name={name}
-      value={currentValue}
-      onChange={(nextValue) => {
-        if (!controlled) setInternalValue(nextValue);
-        onChange?.(nextValue);
-      }}
-    />
+    <>
+      <DesktopDatePicker
+        name={name}
+        value={currentValue}
+        invalid={ageError}
+        errorId={ageError ? errorId : undefined}
+        onChange={(nextValue) => {
+          if (!controlled) setInternalValue(nextValue);
+          onChange?.(nextValue);
+        }}
+      />
+      {ageError && <AgeError id={errorId} minimumAge={minimumAge!} />}
+    </>
+  );
+}
+
+function AgeError({ id, minimumAge }: { id: string; minimumAge: number }) {
+  return (
+    <p id={id} role="alert" className="mt-2 text-xs font-semibold text-[#bd533d]">
+      You must be at least {minimumAge} years old.
+    </p>
   );
 }
 
 function DesktopDatePicker({
   name,
   value,
+  invalid,
+  errorId,
   onChange,
 }: {
   name?: string;
   value: string;
+  invalid: boolean;
+  errorId?: string;
   onChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -193,6 +228,8 @@ function DesktopDatePicker({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={popoverId}
+        aria-invalid={invalid}
+        aria-describedby={errorId}
         onClick={() => setOpen((current) => !current)}
       >
         <span className={value ? "text-[#17221f]" : "text-[#98a19e]"}>

@@ -18,9 +18,13 @@ import {
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Loading } from "../components/Loading";
-import { ModernDatePicker, ModernSelect } from "../components/ModernFormControls";
+import {
+  ModernDatePicker,
+  ModernSelect,
+} from "../components/ModernFormControls";
 import { useAuth } from "../context/AuthContext";
 import { api, friendlyError } from "../lib/api";
+import { isAtLeastAge } from "../lib/date";
 import {
   citiesForCountry,
   countrySuggestions,
@@ -79,13 +83,15 @@ export function ProfilePage() {
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!user) return;
-    setLoading(true);
     const fd = new FormData(e.currentTarget);
+    const birthDate = String(fd.get("birthDate") || "");
+    if (birthDate && !isAtLeastAge(birthDate, 18)) return;
+    setLoading(true);
     const payload: ProfileInput = {
       id: user.id,
       email: user.email,
       displayName: String(fd.get("displayName")),
-      birthDate: String(fd.get("birthDate") || "") || undefined,
+      birthDate: birthDate || undefined,
       gender: (String(fd.get("gender") || "") || undefined) as
         Gender | undefined,
       bio: String(fd.get("bio") || "") || undefined,
@@ -299,6 +305,7 @@ export function ProfilePage() {
                 <ModernDatePicker
                   name="birthDate"
                   defaultValue={profile.birthDate?.slice(0, 10) || ""}
+                  minimumAge={18}
                   nativeClassName="input"
                   nativeWithIcon={false}
                 />
