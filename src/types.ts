@@ -225,13 +225,17 @@ export interface TestSummary {
   version: number;
   description: string | null;
 }
+export interface QuestionOption {
+  label: string;
+  value: number;
+}
 export interface Question {
   id: string;
   code: string;
   prompt: string;
   kind: QuestionKind;
   position: number;
-  options: unknown;
+  options: QuestionOption[];
   minValue: number | null;
   maxValue: number | null;
   trait?: string;

@@ -12,21 +12,38 @@ import { toast } from "sonner";
 import { EmptyState } from "../components/EmptyState";
 import { Loading } from "../components/Loading";
 import { api, friendlyError } from "../lib/api";
-import type { TestSummary } from "../types";
+import type { TestDefinition } from "../types";
 
 export function AssessmentsPage() {
-  const [tests, setTests] = useState<TestSummary[]>();
+  const [tests, setTests] = useState<TestDefinition[]>();
   const navigate = useNavigate();
   useEffect(() => {
     api
       .getTests()
-      .then(setTests)
+      .then((availableTests) =>
+        Promise.all(
+          availableTests
+            .filter((test) => test.type === "BIG_FIVE")
+            .map((test) => api.getTest(test.slug).catch(() => null)),
+        ),
+      )
+      .then((definitions) =>
+        setTests(
+          definitions.filter(
+            (test): test is TestDefinition => Boolean(test?.isActive),
+          ),
+        ),
+      )
       .catch((e) => {
         toast.error(friendlyError(e));
         setTests([]);
       });
   }, []);
   if (!tests) return <Loading label="Loading assessments…" />;
+  const longestTestLength = Math.max(
+    0,
+    ...tests.map((test) => test.questions.length),
+  );
   return (
     <div>
       <div className="max-w-2xl">
@@ -60,7 +77,7 @@ export function AssessmentsPage() {
           </div>
           <div className="flex gap-5 text-xs font-bold text-white/70">
             <span className="flex items-center gap-2">
-              <Clock size={16} /> 5–10 min
+              <Clock size={16} /> Choose your depth
             </span>
             <span className="flex items-center gap-2">
               <Check size={16} /> Private
@@ -68,6 +85,19 @@ export function AssessmentsPage() {
           </div>
         </div>
       </div>
+      {tests.length > 0 && (
+        <div className="mt-8 max-w-3xl">
+          <p className="eyebrow">Choose your precision</p>
+          <h2 className="mt-2 font-[var(--font-display)] text-2xl font-extrabold">
+            More questions create a clearer personality picture.
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[#71807b]">
+            A shorter test is quicker. The longer test samples each Big Five
+            trait more thoroughly, which can produce more stable and nuanced
+            compatibility insights.
+          </p>
+        </div>
+      )}
       <div className="mt-8">
         {tests.length === 0 ? (
           <EmptyState
@@ -77,34 +107,48 @@ export function AssessmentsPage() {
           />
         ) : (
           <div className="grid gap-5 md:grid-cols-2">
-            {tests.map((test, i) => (
-              <article key={test.id} className="card p-6">
-                <div className="flex items-start justify-between">
-                  <span
-                    className={`grid size-12 place-items-center rounded-2xl ${i % 2 ? "bg-[#fff0e9] text-[#c86850]" : "bg-[#e5f2ed] text-[#27775f]"}`}
+            {tests.map((test, i) => {
+              const questionCount = test.questions.length;
+              const isMostPrecise =
+                questionCount === longestTestLength && questionCount > 10;
+              const minutes = Math.max(2, Math.ceil(questionCount / 5));
+              return (
+                <article key={test.id} className="card p-6">
+                  <div className="flex items-start justify-between">
+                    <span
+                      className={`grid size-12 place-items-center rounded-2xl ${i % 2 ? "bg-[#fff0e9] text-[#c86850]" : "bg-[#e5f2ed] text-[#27775f]"}`}
+                    >
+                      <Sparkles size={22} />
+                    </span>
+                    <span className="rounded-full bg-[#f1f3ef] px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-[#71807b]">
+                      {isMostPrecise ? "Most precise" : "Quick option"}
+                    </span>
+                  </div>
+                  <h2 className="mt-6 font-[var(--font-display)] text-xl font-extrabold">
+                    {test.name}
+                  </h2>
+                  <p className="mt-2 min-h-12 text-sm leading-6 text-[#71807b]">
+                    {test.description ||
+                      "A thoughtful assessment designed to improve your compatibility results."}
+                  </p>
+                  <div className="mt-4 flex gap-4 text-xs font-bold text-[#71807b]">
+                    <span className="flex items-center gap-1.5">
+                      <ClipboardList size={15} /> {questionCount} questions
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Clock size={15} /> About {minutes} min
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/app/assessments/${test.slug}`)}
+                    className="mt-5 flex w-full items-center justify-between rounded-xl border border-black/8 px-4 py-3 text-sm font-bold hover:border-[#27775f] hover:bg-[#f4faf7]"
                   >
-                    <Sparkles size={22} />
-                  </span>
-                  <span className="rounded-full bg-[#f1f3ef] px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-[#71807b]">
-                    Version {test.version}
-                  </span>
-                </div>
-                <h2 className="mt-6 font-[var(--font-display)] text-xl font-extrabold">
-                  {test.name}
-                </h2>
-                <p className="mt-2 min-h-12 text-sm leading-6 text-[#71807b]">
-                  {test.description ||
-                    "A thoughtful assessment designed to improve your compatibility results."}
-                </p>
-                <button
-                  onClick={() => navigate(`/app/assessments/${test.slug}`)}
-                  className="mt-5 flex w-full items-center justify-between rounded-xl border border-black/8 px-4 py-3 text-sm font-bold hover:border-[#27775f] hover:bg-[#f4faf7]"
-                >
-                  <span>Start assessment</span>
-                  <ArrowRight size={17} />
-                </button>
-              </article>
-            ))}
+                    <span>Start assessment</span>
+                    <ArrowRight size={17} />
+                  </button>
+                </article>
+              );
+            })}
           </div>
         )}
       </div>

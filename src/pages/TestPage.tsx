@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Loading } from "../components/Loading";
 import { useAuth } from "../context/AuthContext";
 import { api, friendlyError } from "../lib/api";
-import type { Submission, TestDefinition } from "../types";
+import type { QuestionOption, Submission, TestDefinition } from "../types";
 
 export function TestPage() {
   const { slug } = useParams();
@@ -86,6 +86,15 @@ export function TestPage() {
       </div>
     );
   const value = answers[question.id];
+  const options: QuestionOption[] = Array.isArray(question.options)
+    ? question.options.filter(
+        (option): option is QuestionOption =>
+          typeof option === "object" &&
+          option !== null &&
+          typeof option.label === "string" &&
+          typeof option.value === "number",
+      )
+    : [];
   async function advance() {
     if (value === undefined) {
       toast.error("Choose an answer to continue");
@@ -96,6 +105,14 @@ export function TestPage() {
       return;
     }
     if (!user) return;
+    const unansweredIndex = questions.findIndex(
+      (candidate) => answers[candidate.id] === undefined,
+    );
+    if (unansweredIndex !== -1) {
+      setIndex(unansweredIndex);
+      toast.error("Please answer every question before submitting");
+      return;
+    }
     setLoading(true);
     try {
       const submission = await api.submitTest({
@@ -145,26 +162,30 @@ export function TestPage() {
         <h1 className="mt-4 font-[var(--font-display)] text-2xl font-extrabold leading-snug sm:text-3xl">
           {question.prompt}
         </h1>
-        <div className="mt-8 grid gap-3 sm:grid-cols-5">
-          {[1, 2, 3, 4, 5].map((v) => (
+        <div
+          className="mt-8 grid gap-3 sm:grid-cols-5"
+          role="radiogroup"
+          aria-label={question.prompt}
+        >
+          {options.map((option) => (
             <button
-              key={v}
-              onClick={() => setAnswers({ ...answers, [question.id]: v })}
-              className={`relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border text-center ${value === v ? "border-[#27775f] bg-[#eaf5f1] text-[#174f3f] shadow-sm" : "border-black/8 bg-white text-[#64716d] hover:border-[#91b8aa]"}`}
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={value === option.value}
+              onClick={() =>
+                setAnswers((current) => ({
+                  ...current,
+                  [question.id]: option.value,
+                }))
+              }
+              className={`relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border px-2 text-center ${value === option.value ? "border-[#27775f] bg-[#eaf5f1] text-[#174f3f] shadow-sm" : "border-black/8 bg-white text-[#64716d] hover:border-[#91b8aa]"}`}
             >
-              <span className="text-xl font-black">{v}</span>
-              <span className="text-[10px] font-bold">
-                {
-                  [
-                    "Strongly disagree",
-                    "Disagree",
-                    "Neutral",
-                    "Agree",
-                    "Strongly agree",
-                  ][v - 1]
-                }
+              <span className="text-xl font-black">{option.value}</span>
+              <span className="text-[10px] font-bold leading-4">
+                {option.label}
               </span>
-              {value === v && (
+              {value === option.value && (
                 <span className="absolute right-2 top-2 grid size-5 place-items-center rounded-full bg-[#27775f] text-white">
                   <Check size={12} />
                 </span>
@@ -172,6 +193,11 @@ export function TestPage() {
             </button>
           ))}
         </div>
+        {options.length === 0 && (
+          <p className="mt-8 rounded-2xl bg-[#fff0e9] p-4 text-sm font-bold text-[#9b4d3c]">
+            This question has no answer options. Please exit and try again later.
+          </p>
+        )}
       </section>
       <div className="mt-6 flex justify-between">
         <button
@@ -182,7 +208,7 @@ export function TestPage() {
           <ArrowLeft size={17} /> Previous
         </button>
         <button
-          disabled={loading || value === undefined}
+          disabled={loading || value === undefined || options.length === 0}
           onClick={advance}
           className="btn-primary"
         >
