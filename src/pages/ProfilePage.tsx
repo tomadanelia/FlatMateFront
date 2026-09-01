@@ -18,6 +18,7 @@ import {
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Loading } from "../components/Loading";
+import { ModernDatePicker, ModernSelect } from "../components/ModernFormControls";
 import { useAuth } from "../context/AuthContext";
 import { api, friendlyError } from "../lib/api";
 import {
@@ -295,32 +296,28 @@ export function ProfilePage() {
                 />
               </Field>
               <Field label="Birth date">
-                <input
+                <ModernDatePicker
                   name="birthDate"
-                  type="date"
-                  className="input"
                   defaultValue={profile.birthDate?.slice(0, 10) || ""}
+                  nativeClassName="input"
+                  nativeWithIcon={false}
                 />
               </Field>
               <Field label="Gender">
-                <select
+                <ModernSelect
                   name="gender"
-                  className="input"
                   defaultValue={profile.gender || ""}
-                >
-                  <option value="">Not specified</option>
-                  {[
-                    "WOMAN",
-                    "MAN",
-                    "NON_BINARY",
-                    "OTHER",
-                    "PREFER_NOT_TO_SAY",
-                  ].map((g) => (
-                    <option key={g} value={g}>
-                      {g.replaceAll("_", " ").toLowerCase()}
-                    </option>
-                  ))}
-                </select>
+                  nativeClassName="input"
+                  nativeWithIcon={false}
+                  options={[
+                    { value: "", label: "Not specified" },
+                    { value: "WOMAN", label: "Woman" },
+                    { value: "MAN", label: "Man" },
+                    { value: "NON_BINARY", label: "Non-binary" },
+                    { value: "OTHER", label: "Other" },
+                    { value: "PREFER_NOT_TO_SAY", label: "Prefer not to say" },
+                  ]}
+                />
               </Field>
               <div />
               <div className="sm:col-span-2">

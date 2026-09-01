@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
-  CalendarDays,
   Check,
   ChevronDown,
   Globe2,
@@ -15,6 +14,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Brand } from "../components/Brand";
+import { ModernDatePicker, ModernSelect } from "../components/ModernFormControls";
 import { useAuth } from "../context/AuthContext";
 import { api, friendlyError } from "../lib/api";
 import {
@@ -214,22 +214,12 @@ export function OnboardingPage() {
                         (optional)
                       </span>
                     </label>
-                    <div className="group relative">
-                      <input
-                        className="input picker-input pr-12 font-semibold"
-                        type="date"
+                    <ModernDatePicker
                         value={form.birthDate}
-                        onClick={(e) => e.currentTarget.showPicker?.()}
-                        onChange={(e) =>
-                          setForm({ ...form, birthDate: e.target.value })
+                        onChange={(birthDate) =>
+                          setForm({ ...form, birthDate })
                         }
                       />
-                      <CalendarDays
-                        aria-hidden="true"
-                        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#648079] transition-colors group-focus-within:text-[#27775f]"
-                        size={18}
-                      />
-                    </div>
                   </div>
                   <div>
                     <label className="label">
@@ -238,32 +228,23 @@ export function OnboardingPage() {
                         (optional)
                       </span>
                     </label>
-                    <div className="group relative">
-                      <select
-                        className="input picker-input appearance-none pr-12 font-semibold"
+                    <ModernSelect
                         value={form.gender}
-                        onChange={(e) =>
+                        onChange={(gender) =>
                           setForm({
                             ...form,
-                            gender: e.target.value as Gender | "",
+                            gender: gender as Gender | "",
                           })
                         }
-                      >
-                        <option value="">Choose an option</option>
-                        <option value="WOMAN">Woman</option>
-                        <option value="MAN">Man</option>
-                        <option value="NON_BINARY">Non-binary</option>
-                        <option value="OTHER">Other</option>
-                        <option value="PREFER_NOT_TO_SAY">
-                          Prefer not to say
-                        </option>
-                      </select>
-                      <ChevronDown
-                        aria-hidden="true"
-                        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#648079] transition-colors group-focus-within:text-[#27775f]"
-                        size={18}
+                        options={[
+                          { value: "", label: "Choose an option" },
+                          { value: "WOMAN", label: "Woman" },
+                          { value: "MAN", label: "Man" },
+                          { value: "NON_BINARY", label: "Non-binary" },
+                          { value: "OTHER", label: "Other" },
+                          { value: "PREFER_NOT_TO_SAY", label: "Prefer not to say" },
+                        ]}
                       />
-                    </div>
                   </div>
                 </div>
                 <div>
