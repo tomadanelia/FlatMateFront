@@ -6,12 +6,17 @@ import {
   Check,
   ChevronRight,
   Gauge,
+  LoaderCircle,
   Pencil,
   Plus,
   Save,
+  Search,
   ShieldCheck,
   SlidersHorizontal,
+  Trash2,
   UserCog,
+  Users,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Loading } from "../components/Loading";
@@ -19,6 +24,7 @@ import { api, friendlyError } from "../lib/api";
 import type {
   AlgorithmConfig,
   AlgorithmKey,
+  AdminUser,
   Question,
   QuestionInput,
   QuestionKind,
@@ -27,7 +33,7 @@ import type {
   UserRole,
 } from "../types";
 
-type Tab = "algorithms" | "questions" | "roles";
+type Tab = "algorithms" | "questions" | "users" | "roles";
 const algorithmCopy: Record<
   AlgorithmKey,
   { name: string; description: string; color: string }
@@ -74,6 +80,7 @@ export function AdminPage() {
           {[
             ["algorithms", "Algorithms", SlidersHorizontal],
             ["questions", "Questions", BookOpenCheck],
+            ["users", "Users", Users],
             ["roles", "User roles", UserCog],
           ].map(([id, label, Icon]) => {
             const I = Icon as typeof Gauge;
@@ -105,12 +112,236 @@ export function AdminPage() {
             <AlgorithmsPanel />
           ) : tab === "questions" ? (
             <QuestionsPanel />
+          ) : tab === "users" ? (
+            <UsersPanel />
           ) : (
             <RolesPanel />
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+function UsersPanel() {
+  const [users, setUsers] = useState<AdminUser[]>();
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<AdminUser | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    api
+      .getAdminUsers()
+      .then(setUsers)
+      .catch((error) => {
+        toast.error(friendlyError(error));
+        setUsers([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!selected) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && !deleting) setSelected(null);
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [selected, deleting]);
+
+  const query = search.trim().toLocaleLowerCase();
+  const filteredUsers = (users ?? []).filter(
+    (user) =>
+      !query ||
+      (user.displayName ?? "").toLocaleLowerCase().includes(query) ||
+      user.id.toLocaleLowerCase().includes(query),
+  );
+
+  async function deleteUser() {
+    if (!selected) return;
+    setDeleting(true);
+    try {
+      const deleted = await api.deleteAdminUser(selected.id);
+      setUsers((current) => current?.filter((user) => user.id !== deleted.id));
+      setSelected(null);
+      toast.success(`${selected.displayName || deleted.email} was deleted`);
+    } catch (error) {
+      toast.error(friendlyError(error));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  if (!users) return <Loading label="Loading users…" />;
+
+  return (
+    <>
+      <section className="card overflow-hidden">
+        <div className="border-b border-black/6 bg-[#fafbf8] p-5 sm:p-6">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <span className="grid size-12 place-items-center rounded-2xl bg-[#e5f2ed] text-[#27775f]">
+                <Users size={22} />
+              </span>
+              <h2 className="mt-4 font-[var(--font-display)] text-2xl font-extrabold">
+                Manage users
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-[#71807b]">
+                Select a user to permanently delete their account and related data.
+              </p>
+            </div>
+            <span className="self-start rounded-full bg-[#eaf4f0] px-3 py-1.5 text-xs font-extrabold text-[#27775f] sm:self-auto">
+              {users.length} {users.length === 1 ? "user" : "users"}
+            </span>
+          </div>
+          <label className="relative mt-5 block">
+            <span className="sr-only">Search users</span>
+            <Search
+              size={17}
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#8c9793]"
+            />
+            <input
+              type="search"
+              className="input !pl-11"
+              placeholder="Search by name or user ID"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </label>
+        </div>
+
+        <div className="max-h-[31rem] overflow-y-auto p-2 sm:p-3">
+          {filteredUsers.map((user) => {
+            const name = user.displayName?.trim() || "Unnamed user";
+            return (
+              <button
+                key={user.id}
+                type="button"
+                onClick={() => setSelected(user)}
+                className="group flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-[#f1f6f3] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#27775f] sm:px-4"
+                aria-label={`Delete ${name}`}
+              >
+                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#e6f2ed] text-sm font-black uppercase text-[#27775f]">
+                  {name.charAt(0)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-extrabold text-[#26332f]">
+                    {name}
+                  </span>
+                  <span className="mt-0.5 block truncate font-mono text-[10px] text-[#8a9591] sm:text-xs">
+                    {user.id}
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center gap-2 rounded-lg px-2 py-2 text-xs font-bold text-[#9a5b4d] transition-colors group-hover:bg-[#fff0eb] group-hover:text-[#b94e39]">
+                  <Trash2 size={16} />
+                  <span className="hidden sm:inline">Delete</span>
+                </span>
+              </button>
+            );
+          })}
+          {!filteredUsers.length && (
+            <div className="grid min-h-48 place-items-center px-6 text-center">
+              <div>
+                <Users className="mx-auto text-[#a3aca8]" size={28} />
+                <p className="mt-3 text-sm font-bold text-[#56635f]">
+                  {users.length ? "No users match your search" : "No users found"}
+                </p>
+                {users.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="mt-2 text-xs font-bold text-[#27775f] hover:text-[#174f3f]"
+                  >
+                    Clear search
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        {filteredUsers.length > 0 && (
+          <p className="border-t border-black/6 bg-[#fafbf8] px-5 py-3 text-[11px] text-[#87928e]">
+            Showing {filteredUsers.length} of {users.length}. Scroll to browse all users.
+          </p>
+        )}
+      </section>
+
+      {selected && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-[#101c18]/55 p-4 backdrop-blur-sm"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !deleting) setSelected(null);
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-user-title"
+            aria-describedby="delete-user-description"
+            className="w-full max-w-md rounded-[24px] bg-white p-6 shadow-2xl sm:p-7"
+          >
+            <div className="flex items-start justify-between gap-5">
+              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#fff0ea] text-[#b94e39]">
+                <Trash2 size={22} />
+              </span>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setSelected(null)}
+                className="grid size-9 place-items-center rounded-xl text-[#77837f] hover:bg-[#f2f4f1]"
+                aria-label="Cancel deletion"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <h2
+              id="delete-user-title"
+              className="mt-5 font-[var(--font-display)] text-2xl font-extrabold"
+            >
+              Delete {selected.displayName?.trim() || "this user"}?
+            </h2>
+            <p
+              id="delete-user-description"
+              className="mt-3 text-sm leading-6 text-[#67746f]"
+            >
+              This permanently deletes the account, profile, preferences, tests,
+              integrations, conversations, and messages. This action cannot be undone.
+            </p>
+            <div className="mt-4 rounded-xl bg-[#f5f6f3] px-4 py-3">
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#8a9591]">
+                User ID
+              </p>
+              <p className="mt-1 break-all font-mono text-xs text-[#52605c]">
+                {selected.id}
+              </p>
+            </div>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setSelected(null)}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={deleteUser}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#b94e39] px-5 py-3 text-sm font-bold text-white hover:bg-[#9f3f2d] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deleting ? (
+                  <LoaderCircle size={16} className="animate-spin" />
+                ) : (
+                  <Trash2 size={16} />
+                )}
+                {deleting ? "Deleting…" : "Delete user"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

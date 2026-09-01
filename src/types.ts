@@ -28,6 +28,17 @@ export interface SessionUser {
   displayName: string | null;
   role: UserRole;
 }
+
+export interface AdminUser {
+  id: string;
+  displayName: string | null;
+}
+
+export interface DeletedAdminUser {
+  id: string;
+  email: string;
+  deleted: true;
+}
 export interface AuthResponse {
   accessToken: string;
   tokenType: "Bearer";

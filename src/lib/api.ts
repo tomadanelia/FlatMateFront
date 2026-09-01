@@ -23,6 +23,8 @@ import type {
   MessageHistory,
   BlockedUserRecord,
   PublicUserProfile,
+  AdminUser,
+  DeletedAdminUser,
 } from "../types";
 
 const configuredBase = (
@@ -195,6 +197,11 @@ export const api = {
     request<SessionUser>(`/api/admin/users/${encodeURIComponent(id)}/role`, {
       method: "PATCH",
       body: JSON.stringify({ role }),
+    }),
+  getAdminUsers: () => request<AdminUser[]>("/api/admin/users"),
+  deleteAdminUser: (id: string) =>
+    request<DeletedAdminUser>(`/api/admin/users/${encodeURIComponent(id)}`, {
+      method: "DELETE",
     }),
   getConversations: () =>
     request<Conversation[]>("/api/messages/conversations"),
