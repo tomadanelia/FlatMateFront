@@ -2,7 +2,10 @@ import { useEffect, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  CalendarDays,
   Check,
+  ChevronDown,
+  Globe2,
   Home,
   MapPin,
   PawPrint,
@@ -61,7 +64,6 @@ export function OnboardingPage() {
     minMonthlyBudget: 400,
     maxMonthlyBudget: 800,
     currency: "GEL",
-    moveInDate: "",
     preferredAreas: "",
     cleanliness: 3,
     socialLevel: 3,
@@ -110,7 +112,6 @@ export function OnboardingPage() {
       ...(form.birthDate && { birthDate: form.birthDate }),
       ...(form.gender && { gender: form.gender }),
       ...(form.bio && { bio: form.bio.trim() }),
-      ...(form.moveInDate && { moveInDate: form.moveInDate }),
       ...(form.preferredAreas && {
         preferredAreas: form.preferredAreas
           .split(",")
@@ -213,14 +214,22 @@ export function OnboardingPage() {
                         (optional)
                       </span>
                     </label>
-                    <input
-                      className="input"
-                      type="date"
-                      value={form.birthDate}
-                      onChange={(e) =>
-                        setForm({ ...form, birthDate: e.target.value })
-                      }
-                    />
+                    <div className="group relative">
+                      <input
+                        className="input picker-input pr-12 font-semibold"
+                        type="date"
+                        value={form.birthDate}
+                        onClick={(e) => e.currentTarget.showPicker?.()}
+                        onChange={(e) =>
+                          setForm({ ...form, birthDate: e.target.value })
+                        }
+                      />
+                      <CalendarDays
+                        aria-hidden="true"
+                        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#648079] transition-colors group-focus-within:text-[#27775f]"
+                        size={18}
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="label">
@@ -229,25 +238,32 @@ export function OnboardingPage() {
                         (optional)
                       </span>
                     </label>
-                    <select
-                      className="input"
-                      value={form.gender}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          gender: e.target.value as Gender | "",
-                        })
-                      }
-                    >
-                      <option value="">Choose an option</option>
-                      <option value="WOMAN">Woman</option>
-                      <option value="MAN">Man</option>
-                      <option value="NON_BINARY">Non-binary</option>
-                      <option value="OTHER">Other</option>
-                      <option value="PREFER_NOT_TO_SAY">
-                        Prefer not to say
-                      </option>
-                    </select>
+                    <div className="group relative">
+                      <select
+                        className="input picker-input appearance-none pr-12 font-semibold"
+                        value={form.gender}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            gender: e.target.value as Gender | "",
+                          })
+                        }
+                      >
+                        <option value="">Choose an option</option>
+                        <option value="WOMAN">Woman</option>
+                        <option value="MAN">Man</option>
+                        <option value="NON_BINARY">Non-binary</option>
+                        <option value="OTHER">Other</option>
+                        <option value="PREFER_NOT_TO_SAY">
+                          Prefer not to say
+                        </option>
+                      </select>
+                      <ChevronDown
+                        aria-hidden="true"
+                        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#648079] transition-colors group-focus-within:text-[#27775f]"
+                        size={18}
+                      />
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -274,19 +290,32 @@ export function OnboardingPage() {
             )}
             {step === 1 && (
               <div className="mt-9 space-y-5">
-                <div className="grid gap-5 sm:grid-cols-[1fr_140px]">
+                <div className="grid gap-5 sm:grid-cols-[1fr_220px]">
                   <div>
                     <label className="label">City</label>
-                    <input
-                      className="input"
-                      required
-                      placeholder="e.g. Tbilisi"
-                      list="onboarding-city-suggestions"
-                      value={form.city}
-                      onChange={(e) =>
-                        setForm({ ...form, city: e.target.value })
-                      }
-                    />
+                    <div className="group relative">
+                      <MapPin
+                        aria-hidden="true"
+                        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#7d8c87] transition-colors group-focus-within:text-[#27775f]"
+                        size={17}
+                      />
+                      <input
+                        className="input picker-input pl-11 pr-11 font-semibold"
+                        required
+                        placeholder="Start typing a city"
+                        list="onboarding-city-suggestions"
+                        value={form.city}
+                        onClick={(e) => e.currentTarget.showPicker?.()}
+                        onChange={(e) =>
+                          setForm({ ...form, city: e.target.value })
+                        }
+                      />
+                      <ChevronDown
+                        aria-hidden="true"
+                        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#648079] transition-colors group-focus-within:text-[#27775f]"
+                        size={17}
+                      />
+                    </div>
                     <datalist id="onboarding-city-suggestions">
                       {citiesForCountry(form.countryCode).map((city) => (
                         <option key={city} value={city} />
@@ -294,28 +323,33 @@ export function OnboardingPage() {
                     </datalist>
                   </div>
                   <div>
-                    <label className="label">Country code</label>
-                    <input
-                      className="input uppercase"
-                      required
-                      minLength={2}
-                      maxLength={2}
-                      placeholder="GE"
-                      list="onboarding-country-suggestions"
-                      value={form.countryCode}
-                      onChange={(e) =>
-                        setForm({ ...form, countryCode: e.target.value })
-                      }
-                    />
-                    <datalist id="onboarding-country-suggestions">
-                      {countrySuggestions.map((country) => (
-                        <option
-                          key={country.code}
-                          value={country.code}
-                          label={country.name}
-                        />
-                      ))}
-                    </datalist>
+                    <label className="label">Country</label>
+                    <div className="group relative">
+                      <Globe2
+                        aria-hidden="true"
+                        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#7d8c87] transition-colors group-focus-within:text-[#27775f]"
+                        size={17}
+                      />
+                      <select
+                        className="input picker-input appearance-none pl-11 pr-11 font-semibold"
+                        required
+                        value={form.countryCode}
+                        onChange={(e) =>
+                          setForm({ ...form, countryCode: e.target.value })
+                        }
+                      >
+                        {countrySuggestions.map((country) => (
+                          <option key={country.code} value={country.code}>
+                            {country.name} ({country.code})
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown
+                        aria-hidden="true"
+                        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#648079] transition-colors group-focus-within:text-[#27775f]"
+                        size={17}
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="rounded-2xl border border-black/6 bg-white p-5">
@@ -376,22 +410,6 @@ export function OnboardingPage() {
                       />
                     </div>
                   </div>
-                </div>
-                <div>
-                  <label className="label">
-                    Ideal move-in date{" "}
-                    <span className="font-normal text-[#909a96]">
-                      (optional)
-                    </span>
-                  </label>
-                  <input
-                    className="input"
-                    type="date"
-                    value={form.moveInDate}
-                    onChange={(e) =>
-                      setForm({ ...form, moveInDate: e.target.value })
-                    }
-                  />
                 </div>
                 <div>
                   <label className="label">

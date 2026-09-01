@@ -93,7 +93,6 @@ export function ProfilePage() {
       minMonthlyBudget: Number(fd.get("minMonthlyBudget")),
       maxMonthlyBudget: Number(fd.get("maxMonthlyBudget")),
       currency: String(fd.get("currency")),
-      moveInDate: String(fd.get("moveInDate") || "") || undefined,
       preferredAreas: String(fd.get("preferredAreas") || "")
         .split(",")
         .map((x) => x.trim())
@@ -409,14 +408,6 @@ export function ProfilePage() {
                   className="input"
                   required
                   defaultValue={h.maxMonthlyBudget}
-                />
-              </Field>
-              <Field label="Move-in date">
-                <input
-                  name="moveInDate"
-                  type="date"
-                  className="input"
-                  defaultValue={h.moveInDate?.slice(0, 10) || ""}
                 />
               </Field>
               <div className="sm:col-span-2 lg:col-span-3">

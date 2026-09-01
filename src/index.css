@@ -28,9 +28,19 @@
   .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-[#174f3f] px-5 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(23,79,63,.18)] hover:-translate-y-0.5 hover:bg-[#103e31] disabled:pointer-events-none disabled:opacity-50; }
   .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-[#d9ddd7] bg-white px-5 py-3 text-sm font-bold text-[#26332f] hover:border-[#174f3f] hover:bg-[#f8faf8]; }
   .input { @apply w-full rounded-xl border border-[#dfe2dc] bg-white px-4 py-3 text-sm text-[#17221f] placeholder:text-[#98a19e]; }
+  .picker-input { @apply min-h-12 cursor-pointer border-[#d5ddd7] bg-[#fbfcfa] transition-[border-color,box-shadow,background-color] duration-150 hover:border-[#9db9af] hover:bg-white; }
   .label { @apply mb-2 block text-sm font-bold text-[#36443f]; }
   .card { @apply rounded-2xl border border-black/6 bg-white shadow-[0_10px_40px_rgba(37,53,47,.06)]; }
   .eyebrow { @apply text-xs font-extrabold uppercase tracking-[.18em] text-[#27775f]; }
+}
+
+.picker-input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  opacity: 0;
 }
 
 .soft-grid {

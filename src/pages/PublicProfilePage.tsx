@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   BedDouble,
-  CalendarDays,
   Cat,
   ChevronRight,
   CircleGauge,
@@ -189,7 +188,6 @@ export function PublicProfilePage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <InfoTile icon={MapPin} label="Location" value={[housing.city, housing.countryCode].filter(Boolean).join(", ")} />
                 <InfoTile icon={WalletCards} label="Monthly budget" value={`${formatMoney(housing.minMonthlyBudget, housing.currency)} – ${formatMoney(housing.maxMonthlyBudget, housing.currency)}`} />
-                <InfoTile icon={CalendarDays} label="Move-in" value={housing.moveInDate ? formatDate(housing.moveInDate) : "Flexible"} />
                 <InfoTile icon={ChevronRight} label="Preferred areas" value={housing.preferredAreas?.length ? housing.preferredAreas.join(", ") : "Open to suggestions"} />
               </div>
             ) : <MutedCopy text="Housing preferences haven’t been added yet." />}
@@ -300,5 +298,4 @@ function ageFromBirthDate(value?: string | null) {
 }
 
 function formatLabel(value: string) { return value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()); }
-function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? "Flexible" : new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(date); }
 function formatMoney(value: number, currency: string) { try { return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 0 }).format(value); } catch { return `${value.toLocaleString()} ${currency}`; } }
