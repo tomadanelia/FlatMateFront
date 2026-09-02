@@ -24,6 +24,8 @@ import type {
   BlockedUserRecord,
   PublicUserProfile,
   AdminUser,
+  AdminUserCompletionStatus,
+  CompletedPersonalityTestStatus,
   DeletedAdminUser,
 } from "../types";
 
@@ -199,6 +201,14 @@ export const api = {
       body: JSON.stringify({ role }),
     }),
   getAdminUsers: () => request<AdminUser[]>("/api/admin/users"),
+  getAdminUsersByTestStatus: (status: CompletedPersonalityTestStatus) =>
+    request<AdminUser[]>(
+      `/api/admin/users/by-test-status/${encodeURIComponent(status)}`,
+    ),
+  getAdminUserCompletionStatus: (id: string) =>
+    request<AdminUserCompletionStatus>(
+      `/api/admin/users/${encodeURIComponent(id)}/completion-status`,
+    ),
   deleteAdminUser: (id: string) =>
     request<DeletedAdminUser>(`/api/admin/users/${encodeURIComponent(id)}`, {
       method: "DELETE",

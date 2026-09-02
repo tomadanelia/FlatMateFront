@@ -32,6 +32,37 @@ export interface SessionUser {
 export interface AdminUser {
   id: string;
   displayName: string | null;
+  email?: string;
+}
+
+export type PersonalityTestStatus =
+  | "NONE"
+  | "SHORT_ONLY"
+  | "LONG_ONLY"
+  | "BOTH";
+
+export type CompletedPersonalityTestStatus = Exclude<
+  PersonalityTestStatus,
+  "NONE"
+>;
+
+export interface AdminUserCompletionStatus {
+  userId: string;
+  personalityTests: {
+    status: PersonalityTestStatus;
+    completedShort: boolean;
+    completedLong: boolean;
+  };
+  tastes: {
+    selected: boolean;
+    counts: {
+      musicGenres: number;
+      favoriteArtists: number;
+      movieGenres: number;
+      favoriteMovies: number;
+      importedItems: number;
+    };
+  };
 }
 
 export interface DeletedAdminUser {

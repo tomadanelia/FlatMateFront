@@ -4,9 +4,14 @@ import {
   BookOpenCheck,
   Braces,
   Check,
+  CheckCircle2,
   ChevronRight,
+  Circle,
+  ClipboardCheck,
+  Film,
   Gauge,
   LoaderCircle,
+  Music,
   Pencil,
   Plus,
   Save,
@@ -25,6 +30,8 @@ import type {
   AlgorithmConfig,
   AlgorithmKey,
   AdminUser,
+  AdminUserCompletionStatus,
+  CompletedPersonalityTestStatus,
   Question,
   QuestionInput,
   QuestionKind,
@@ -125,8 +132,19 @@ export function AdminPage() {
 
 function UsersPanel() {
   const [users, setUsers] = useState<AdminUser[]>();
+  const [usersByStatus, setUsersByStatus] = useState<
+    Partial<Record<CompletedPersonalityTestStatus, AdminUser[]>>
+  >({});
+  const [testFilter, setTestFilter] = useState<
+    "ALL" | CompletedPersonalityTestStatus
+  >("ALL");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<AdminUser | null>(null);
+  const [completion, setCompletion] =
+    useState<AdminUserCompletionStatus | null>(null);
+  const [completionLoading, setCompletionLoading] = useState(false);
+  const [completionError, setCompletionError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -137,22 +155,81 @@ function UsersPanel() {
         toast.error(friendlyError(error));
         setUsers([]);
       });
+
+    const statuses: CompletedPersonalityTestStatus[] = [
+      "SHORT_ONLY",
+      "LONG_ONLY",
+      "BOTH",
+    ];
+    Promise.allSettled(
+      statuses.map(async (status) => {
+        const result = await api.getAdminUsersByTestStatus(status);
+        return [status, result] as const;
+      }),
+    ).then((results) => {
+      const next: Partial<
+        Record<CompletedPersonalityTestStatus, AdminUser[]>
+      > = {};
+      let failed = false;
+      results.forEach((result) => {
+        if (result.status === "fulfilled") {
+          next[result.value[0]] = result.value[1];
+        } else {
+          failed = true;
+        }
+      });
+      setUsersByStatus(next);
+      if (failed) toast.error("Some test statistics could not be loaded");
+    });
   }, []);
+
+  useEffect(() => {
+    if (!selected) {
+      setCompletion(null);
+      setCompletionError(null);
+      setConfirmDelete(false);
+      return;
+    }
+
+    let active = true;
+    setCompletion(null);
+    setCompletionError(null);
+    setCompletionLoading(true);
+    api
+      .getAdminUserCompletionStatus(selected.id)
+      .then((result) => {
+        if (active) setCompletion(result);
+      })
+      .catch((error) => {
+        if (active) setCompletionError(friendlyError(error));
+      })
+      .finally(() => {
+        if (active) setCompletionLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [selected]);
 
   useEffect(() => {
     if (!selected) return;
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape" && !deleting) setSelected(null);
+      if (event.key !== "Escape" || deleting) return;
+      if (confirmDelete) setConfirmDelete(false);
+      else setSelected(null);
     }
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [selected, deleting]);
+  }, [selected, deleting, confirmDelete]);
 
   const query = search.trim().toLocaleLowerCase();
-  const filteredUsers = (users ?? []).filter(
+  const sourceUsers =
+    testFilter === "ALL" ? users ?? [] : usersByStatus[testFilter] ?? [];
+  const filteredUsers = sourceUsers.filter(
     (user) =>
       !query ||
       (user.displayName ?? "").toLocaleLowerCase().includes(query) ||
+      (user.email ?? "").toLocaleLowerCase().includes(query) ||
       user.id.toLocaleLowerCase().includes(query),
   );
 
@@ -162,6 +239,11 @@ function UsersPanel() {
     try {
       const deleted = await api.deleteAdminUser(selected.id);
       setUsers((current) => current?.filter((user) => user.id !== deleted.id));
+      setUsersByStatus((current) => ({
+        SHORT_ONLY: current.SHORT_ONLY?.filter((user) => user.id !== deleted.id),
+        LONG_ONLY: current.LONG_ONLY?.filter((user) => user.id !== deleted.id),
+        BOTH: current.BOTH?.filter((user) => user.id !== deleted.id),
+      }));
       setSelected(null);
       toast.success(`${selected.displayName || deleted.email} was deleted`);
     } catch (error) {
@@ -172,6 +254,27 @@ function UsersPanel() {
   }
 
   if (!users) return <Loading label="Loading users…" />;
+
+  const filters: {
+    value: "ALL" | CompletedPersonalityTestStatus;
+    label: string;
+    count: number | undefined;
+  }[] = [
+    { value: "ALL", label: "All users", count: users.length },
+    { value: "SHORT_ONLY", label: "Short only", count: usersByStatus.SHORT_ONLY?.length },
+    { value: "LONG_ONLY", label: "Long only", count: usersByStatus.LONG_ONLY?.length },
+    { value: "BOTH", label: "Both tests", count: usersByStatus.BOTH?.length },
+  ];
+
+  const statusLabels: Record<
+    AdminUserCompletionStatus["personalityTests"]["status"],
+    string
+  > = {
+    NONE: "No completed tests",
+    SHORT_ONLY: "Short test only",
+    LONG_ONLY: "Long test only",
+    BOTH: "Both tests",
+  };
 
   return (
     <>
@@ -186,14 +289,42 @@ function UsersPanel() {
                 Manage users
               </h2>
               <p className="mt-2 text-sm leading-6 text-[#71807b]">
-                Select a user to permanently delete their account and related data.
+                Filter by completed personality tests, then select a user to see
+                their full test and taste status.
               </p>
             </div>
             <span className="self-start rounded-full bg-[#eaf4f0] px-3 py-1.5 text-xs font-extrabold text-[#27775f] sm:self-auto">
               {users.length} {users.length === 1 ? "user" : "users"}
             </span>
           </div>
-          <label className="relative mt-5 block">
+          <div
+            className="mt-5 flex flex-wrap gap-2"
+            aria-label="Filter users by completed test"
+          >
+            {filters.map((filter) => (
+              <button
+                key={filter.value}
+                type="button"
+                disabled={filter.value !== "ALL" && filter.count === undefined}
+                onClick={() => setTestFilter(filter.value)}
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-extrabold transition-colors disabled:cursor-wait disabled:opacity-60 ${
+                  testFilter === filter.value
+                    ? "border-[#174f3f] bg-[#174f3f] text-white"
+                    : "border-black/8 bg-white text-[#596762] hover:border-[#9ab8ad] hover:bg-[#f2f7f4]"
+                }`}
+              >
+                {filter.label}
+                <span
+                  className={`rounded-full px-2 py-0.5 ${
+                    testFilter === filter.value ? "bg-white/18" : "bg-[#edf1ee]"
+                  }`}
+                >
+                  {filter.count ?? "…"}
+                </span>
+              </button>
+            ))}
+          </div>
+          <label className="relative mt-4 block">
             <span className="sr-only">Search users</span>
             <Search
               size={17}
@@ -202,7 +333,7 @@ function UsersPanel() {
             <input
               type="search"
               className="input !pl-11"
-              placeholder="Search by name or user ID"
+              placeholder="Search by name, email or user ID"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -218,7 +349,7 @@ function UsersPanel() {
                 type="button"
                 onClick={() => setSelected(user)}
                 className="group flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-[#f1f6f3] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#27775f] sm:px-4"
-                aria-label={`Delete ${name}`}
+                aria-label={`View completion details for ${name}`}
               >
                 <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#e6f2ed] text-sm font-black uppercase text-[#27775f]">
                   {name.charAt(0)}
@@ -228,12 +359,12 @@ function UsersPanel() {
                     {name}
                   </span>
                   <span className="mt-0.5 block truncate font-mono text-[10px] text-[#8a9591] sm:text-xs">
-                    {user.id}
+                    {user.email || user.id}
                   </span>
                 </span>
-                <span className="flex shrink-0 items-center gap-2 rounded-lg px-2 py-2 text-xs font-bold text-[#9a5b4d] transition-colors group-hover:bg-[#fff0eb] group-hover:text-[#b94e39]">
-                  <Trash2 size={16} />
-                  <span className="hidden sm:inline">Delete</span>
+                <span className="flex shrink-0 items-center gap-2 rounded-lg px-2 py-2 text-xs font-bold text-[#27775f] transition-colors group-hover:bg-[#e4f1ec]">
+                  <ClipboardCheck size={16} />
+                  <span className="hidden sm:inline">View status</span>
                 </span>
               </button>
             );
@@ -243,15 +374,20 @@ function UsersPanel() {
               <div>
                 <Users className="mx-auto text-[#a3aca8]" size={28} />
                 <p className="mt-3 text-sm font-bold text-[#56635f]">
-                  {users.length ? "No users match your search" : "No users found"}
+                  {sourceUsers.length
+                    ? "No users match your search"
+                    : "No users found for this filter"}
                 </p>
-                {users.length > 0 && (
+                {(search || testFilter !== "ALL") && (
                   <button
                     type="button"
-                    onClick={() => setSearch("")}
+                    onClick={() => {
+                      setSearch("");
+                      setTestFilter("ALL");
+                    }}
                     className="mt-2 text-xs font-bold text-[#27775f] hover:text-[#174f3f]"
                   >
-                    Clear search
+                    Clear filters
                   </button>
                 )}
               </div>
@@ -260,7 +396,7 @@ function UsersPanel() {
         </div>
         {filteredUsers.length > 0 && (
           <p className="border-t border-black/6 bg-[#fafbf8] px-5 py-3 text-[11px] text-[#87928e]">
-            Showing {filteredUsers.length} of {users.length}. Scroll to browse all users.
+            Showing {filteredUsers.length} of {sourceUsers.length} for this filter.
           </p>
         )}
       </section>
@@ -274,39 +410,34 @@ function UsersPanel() {
           }}
         >
           <div
-            role="alertdialog"
+            role="dialog"
             aria-modal="true"
-            aria-labelledby="delete-user-title"
-            aria-describedby="delete-user-description"
-            className="w-full max-w-md rounded-[24px] bg-white p-6 shadow-2xl sm:p-7"
+            aria-labelledby="user-status-title"
+            className="max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-[24px] bg-white p-6 shadow-2xl sm:p-7"
           >
             <div className="flex items-start justify-between gap-5">
-              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#fff0ea] text-[#b94e39]">
-                <Trash2 size={22} />
+              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#e5f2ed] text-[#27775f]">
+                <ClipboardCheck size={22} />
               </span>
               <button
                 type="button"
                 disabled={deleting}
                 onClick={() => setSelected(null)}
                 className="grid size-9 place-items-center rounded-xl text-[#77837f] hover:bg-[#f2f4f1]"
-                aria-label="Cancel deletion"
+                aria-label="Close user details"
               >
                 <X size={18} />
               </button>
             </div>
             <h2
-              id="delete-user-title"
+              id="user-status-title"
               className="mt-5 font-[var(--font-display)] text-2xl font-extrabold"
             >
-              Delete {selected.displayName?.trim() || "this user"}?
+              {selected.displayName?.trim() || "Unnamed user"}
             </h2>
-            <p
-              id="delete-user-description"
-              className="mt-3 text-sm leading-6 text-[#67746f]"
-            >
-              This permanently deletes the account, profile, preferences, tests,
-              integrations, conversations, and messages. This action cannot be undone.
-            </p>
+            {selected.email && (
+              <p className="mt-1 text-sm text-[#67746f]">{selected.email}</p>
+            )}
             <div className="mt-4 rounded-xl bg-[#f5f6f3] px-4 py-3">
               <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#8a9591]">
                 User ID
@@ -315,28 +446,142 @@ function UsersPanel() {
                 {selected.id}
               </p>
             </div>
-            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                disabled={deleting}
-                onClick={() => setSelected(null)}
-                className="btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={deleting}
-                onClick={deleteUser}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#b94e39] px-5 py-3 text-sm font-bold text-white hover:bg-[#9f3f2d] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {deleting ? (
-                  <LoaderCircle size={16} className="animate-spin" />
-                ) : (
-                  <Trash2 size={16} />
-                )}
-                {deleting ? "Deleting…" : "Delete user"}
-              </button>
+
+            <div className="mt-6">
+              {completionLoading ? (
+                <div className="grid min-h-48 place-items-center text-sm font-bold text-[#71807b]">
+                  <span className="flex items-center gap-2">
+                    <LoaderCircle size={18} className="animate-spin" />
+                    Loading completion status…
+                  </span>
+                </div>
+              ) : completionError ? (
+                <div className="rounded-xl border border-[#efc5ba] bg-[#fff3ef] p-4 text-sm text-[#984631]">
+                  Could not load completion status: {completionError}
+                </div>
+              ) : completion ? (
+                <div className="space-y-5">
+                  <section>
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-extrabold text-[#26332f]">
+                        Personality tests
+                      </h3>
+                      <span className="rounded-full bg-[#eaf4f0] px-3 py-1 text-[11px] font-extrabold text-[#27775f]">
+                        {statusLabels[completion.personalityTests.status]}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      {[
+                        ["Short test", completion.personalityTests.completedShort],
+                        ["Long test", completion.personalityTests.completedLong],
+                      ].map(([label, complete]) => (
+                        <div
+                          key={String(label)}
+                          className="flex items-center gap-3 rounded-xl border border-black/7 p-4"
+                        >
+                          {complete ? (
+                            <CheckCircle2 size={20} className="text-[#27775f]" />
+                          ) : (
+                            <Circle size={20} className="text-[#a7b0ac]" />
+                          )}
+                          <div>
+                            <p className="text-sm font-extrabold">{String(label)}</p>
+                            <p className="mt-0.5 text-xs text-[#7c8884]">
+                              {complete ? "Completed" : "Not completed"}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section>
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-extrabold text-[#26332f]">
+                        Taste selections
+                      </h3>
+                      <span
+                        className={`rounded-full px-3 py-1 text-[11px] font-extrabold ${
+                          completion.tastes.selected
+                            ? "bg-[#eaf4f0] text-[#27775f]"
+                            : "bg-[#f0f2ef] text-[#7c8884]"
+                        }`}
+                      >
+                        {completion.tastes.selected ? "Selected" : "None selected"}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                      {[
+                        ["Music genres", completion.tastes.counts.musicGenres, Music],
+                        ["Artists", completion.tastes.counts.favoriteArtists, Music],
+                        ["Movie genres", completion.tastes.counts.movieGenres, Film],
+                        ["Movies", completion.tastes.counts.favoriteMovies, Film],
+                        ["Imported", completion.tastes.counts.importedItems, Activity],
+                      ].map(([label, count, Icon]) => {
+                        const CountIcon = Icon as typeof Music;
+                        return (
+                          <div key={String(label)} className="rounded-xl bg-[#f5f7f4] p-3">
+                            <CountIcon size={16} className="text-[#74827d]" />
+                            <p className="mt-3 text-xl font-black text-[#26332f]">
+                              {String(count)}
+                            </p>
+                            <p className="mt-0.5 text-[10px] font-bold leading-4 text-[#7c8884]">
+                              {String(label)}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-6 border-t border-black/7 pt-5">
+              {confirmDelete ? (
+                <div className="rounded-xl border border-[#efc5ba] bg-[#fff3ef] p-4">
+                  <p className="text-sm font-extrabold text-[#8f3d2b]">
+                    Permanently delete this user?
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-[#9a5b4d]">
+                    Their account and all related data will be deleted. This cannot
+                    be undone.
+                  </p>
+                  <div className="mt-4 flex flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      disabled={deleting}
+                      onClick={() => setConfirmDelete(false)}
+                      className="btn-secondary"
+                    >
+                      Keep user
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deleting}
+                      onClick={deleteUser}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#b94e39] px-5 py-3 text-sm font-bold text-white hover:bg-[#9f3f2d] disabled:opacity-60"
+                    >
+                      {deleting ? (
+                        <LoaderCircle size={16} className="animate-spin" />
+                      ) : (
+                        <Trash2 size={16} />
+                      )}
+                      {deleting ? "Deleting…" : "Yes, delete user"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(true)}
+                    className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-[#a74b37] hover:bg-[#fff0eb]"
+                  >
+                    <Trash2 size={16} /> Delete user
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
