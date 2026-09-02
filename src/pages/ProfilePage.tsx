@@ -33,6 +33,7 @@ import type {
   BlockedUser,
   BlockedUserRecord,
   Gender,
+  LookingFor,
   ProfileInput,
   UserProfile,
   UserTastes,
@@ -94,6 +95,7 @@ export function ProfilePage() {
       birthDate: birthDate || undefined,
       gender: (String(fd.get("gender") || "") || undefined) as
         Gender | undefined,
+      lookingFor: String(fd.get("lookingFor") || "all") as LookingFor,
       bio: String(fd.get("bio") || "") || undefined,
       city: String(fd.get("city")),
       countryCode: String(fd.get("countryCode")),
@@ -326,7 +328,60 @@ export function ProfilePage() {
                   ]}
                 />
               </Field>
-              <div />
+              <fieldset
+                className="sm:col-span-2"
+                aria-describedby="looking-for-description"
+              >
+                <legend className="label">Roommate gender preference</legend>
+                <p
+                  id="looking-for-description"
+                  className="mb-3 text-xs leading-5 text-[#82908b]"
+                >
+                  Choose who can view your profile, match with you, and send
+                  you messages.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {[
+                    {
+                      value: "female",
+                      label: "Women",
+                      detail: "Women only",
+                    },
+                    { value: "male", label: "Men", detail: "Men only" },
+                    {
+                      value: "all",
+                      label: "Everyone",
+                      detail: "No gender restriction",
+                    },
+                  ].map((option) => (
+                    <label
+                      key={option.value}
+                      className="group flex min-h-16 cursor-pointer items-center justify-between rounded-xl border border-[#dfe2dc] bg-white px-4 py-3 transition has-checked:border-[#27775f] has-checked:bg-[#e8f3ef] has-checked:text-[#174f3f] focus-within:ring-3 focus-within:ring-[#27775f]/20"
+                    >
+                      <input
+                        type="radio"
+                        name="lookingFor"
+                        value={option.value}
+                        className="sr-only"
+                        defaultChecked={
+                          (profile.lookingFor ?? "all") === option.value
+                        }
+                      />
+                      <span>
+                        <span className="block text-sm font-extrabold">
+                          {option.label}
+                        </span>
+                        <span className="mt-0.5 block text-[11px] text-[#82908b] group-has-checked:text-[#52756a]">
+                          {option.detail}
+                        </span>
+                      </span>
+                      <span className="grid size-5 place-items-center rounded-full border border-[#cfd5d1] bg-white text-transparent group-has-checked:border-[#27775f] group-has-checked:bg-[#27775f] group-has-checked:text-white">
+                        <Check size={12} strokeWidth={3} />
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <div className="sm:col-span-2">
                 <Field label="Bio">
                   <textarea

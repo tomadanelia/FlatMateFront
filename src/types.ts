@@ -5,6 +5,7 @@ export type Gender =
   | "NON_BINARY"
   | "OTHER"
   | "PREFER_NOT_TO_SAY";
+export type LookingFor = "male" | "female" | "all";
 export type TestType = "BIG_FIVE" | "HEXACO" | "CUSTOM";
 export type QuestionKind =
   | "LIKERT"
@@ -127,6 +128,7 @@ export interface LetterboxdIntegration {
 export interface UserProfile extends SessionUser {
   birthDate: string | null;
   gender: Gender | null;
+  lookingFor?: LookingFor;
   bio: string | null;
   avatarUrl: string | null;
   isDiscoverable: boolean;
@@ -149,6 +151,7 @@ export interface ProfileInput {
   displayName: string;
   birthDate?: string;
   gender?: Gender;
+  lookingFor?: LookingFor;
   bio?: string;
   city: string;
   countryCode: string;
