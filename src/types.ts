@@ -21,7 +21,7 @@ export type IntegrationStatus =
   | "EXPIRED"
   | "ERROR"
   | "DISCONNECTED";
-export type AlgorithmKey = "PERSONALITY" | "TASTE" | "LIFESTYLE";
+export type AlgorithmKey = "PERSONALITY" | "TASTE" | "LIFESTYLE" | "BUDGET";
 
 export interface SessionUser {
   id: string;

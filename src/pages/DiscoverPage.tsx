@@ -26,6 +26,7 @@ const algoNames: Record<AlgorithmKey, string> = {
   PERSONALITY: "Personality",
   TASTE: "Shared tastes",
   LIFESTYLE: "Lifestyle",
+  BUDGET: "Budget",
 };
 const swatches = [
   "bg-[#e0b26a]",
@@ -171,7 +172,7 @@ export function DiscoverPage() {
           <SlidersHorizontal size={17} className="text-[#27775f]" /> Match by
         </span>
         <div className="flex flex-1 flex-wrap gap-2">
-          {(["PERSONALITY", "TASTE", "LIFESTYLE"] as AlgorithmKey[]).map(
+          {(["PERSONALITY", "TASTE", "LIFESTYLE", "BUDGET"] as AlgorithmKey[]).map(
             (key) => (
               <button
                 key={key}

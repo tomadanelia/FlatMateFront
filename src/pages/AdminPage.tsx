@@ -60,6 +60,11 @@ const algorithmCopy: Record<
     description: "Measures daily rhythms, habits and hard-boundary conflicts.",
     color: "bg-[#e6f4ee] text-[#27775f]",
   },
+  BUDGET: {
+    name: "Budget",
+    description: "Measures how closely users' housing budget ranges overlap.",
+    color: "bg-[#f4edff] text-[#7655a6]",
+  },
 };
 
 export function AdminPage() {
